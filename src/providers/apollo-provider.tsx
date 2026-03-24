@@ -2,12 +2,19 @@
 
 import React from 'react';
 import { ApolloProvider as Provider } from '@apollo/client';
-import { client } from '../libs/apollo-client';
+import { ClientProvider, useClient } from '@/components/client-switcher';
 
-interface ApolloProviderProps {
-  children: React.ReactNode;
+function ApolloProviderInner({ children }: { children: React.ReactNode }) {
+  const { client } = useClient();
+  return <Provider client={client}>{children}</Provider>;
 }
 
-export const ApolloProvider: React.FC<ApolloProviderProps> = ({ children }) => {
-  return <Provider client={client}>{children}</Provider>;
-};
+export function ApolloProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <ClientProvider>
+      <ApolloProviderInner>
+        {children}
+      </ApolloProviderInner>
+    </ClientProvider>
+  );
+}

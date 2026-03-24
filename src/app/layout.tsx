@@ -1,11 +1,13 @@
-import { ApolloProvider } from '../providers/apollo-provider';
-import { ReduxProvider } from '../providers/redux-provider';
 import './globals.css';
+import type { Metadata } from 'next';
+import { ReduxProvider } from '@/providers/redux-provider';
+import { ApolloProvider } from '@/providers/apollo-provider';
+import { DebugPanel } from '@/components/debug-panel';
+import { ClientSwitcher } from '@/components/client-switcher';
 
-
-export const metadata = {
-  title: 'Social Network',
-  description: 'A modern social network platform',
+export const metadata: Metadata = {
+  title: 'Social Hub - Mạng Xã Hội',
+  description: 'Kết nối với bạn bè, chia sẻ khoảnh khắc, và khám phá thế giới',
 };
 
 export default function RootLayout({
@@ -14,13 +16,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="vi">
       <body>
-        <ReduxProvider>
-          <ApolloProvider>
+        <ApolloProvider>
+          <ReduxProvider>
             {children}
-          </ApolloProvider>
-        </ReduxProvider>
+            <DebugPanel />
+            <ClientSwitcher />
+          </ReduxProvider>
+        </ApolloProvider>
       </body>
     </html>
   );
