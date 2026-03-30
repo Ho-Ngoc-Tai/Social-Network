@@ -1,30 +1,28 @@
-import './globals.css';
-import type { Metadata } from 'next';
-import { ReduxProvider } from '@/providers/redux-provider';
-import { ApolloProvider } from '@/providers/apollo-provider';
-import { DebugPanel } from '@/components/debug-panel';
-import { ClientSwitcher } from '@/components/client-switcher';
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+
+import { AppProviders } from "@/providers/AppProviders";
+
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
-  title: 'Social Hub - Mạng Xã Hội',
-  description: 'Kết nối với bạn bè, chia sẻ khoảnh khắc, và khám phá thế giới',
+  title: "Social Network",
+  description: "University Social Network Frontend",
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
-    <html lang="vi">
+    <html lang="en" className={inter.variable}>
       <body>
-        <ApolloProvider>
-          <ReduxProvider>
-            {children}
-            <DebugPanel />
-            <ClientSwitcher />
-          </ReduxProvider>
-        </ApolloProvider>
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );
