@@ -1,10 +1,18 @@
-import type { User } from "../user";
+export interface User {
+  id: string;
+  full_name: string;
+  username: string;
+  avatar: string | null;
+}
 
 export interface Post {
   id: string;
   content: string;
-  createdAt: string;
+  image: string | null;
+  files: string[];
   author: User;
-  likesCount: number;
-  commentsCount: number;
+  likes_count: number;
+  comments_count: number;
+  status: string;
+  created_at: string;
 }

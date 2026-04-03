@@ -14,14 +14,17 @@ export function createMockPost(input: {
   return {
     id: uid("post"),
     content: input.content,
-    createdAt: new Date().toISOString(),
-    likesCount: Math.floor(Math.random() * 120),
-    commentsCount: Math.floor(Math.random() * 12),
+    created_at: new Date().toISOString(),
+    likes_count: Math.floor(Math.random() * 120),
+    comments_count: Math.floor(Math.random() * 12),
+    image: null,
+    files: [],
+    status: "published",
     author: {
       id: input.authorId ?? uid("user"),
-      name: input.authorName,
-      avatarUrl: input.authorAvatarUrl ?? "https://i.pravatar.cc/120?img=68",
-      headline: "Computer Science • University",
+      full_name: input.authorName,
+      username: input.authorName.toLowerCase().replace(/\s+/g, '_'),
+      avatar: input.authorAvatarUrl ?? "https://i.pravatar.cc/120?img=68",
     },
   };
 }

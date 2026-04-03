@@ -15,7 +15,9 @@ export const store = configureStore({
     }).concat(sagaMiddleware),
 });
 
-sagaMiddleware.run(rootSaga);
+if (typeof window !== 'undefined') {
+  sagaMiddleware.run(rootSaga);
+}
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;

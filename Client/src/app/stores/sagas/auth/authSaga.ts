@@ -1,5 +1,6 @@
 import { put, takeLatest, call } from "redux-saga/effects";
 import { authActions } from "../../reducers/auth/authSlice";
+import { NEXT_LOGIN_ENDPOINT, NEXT_REGISTER_ENDPOINT, NEXT_CURRENT_USER_ENDPOINT } from "../../../routes/next.api";
 
 // API Response Types
 interface LoginResponse {
@@ -42,7 +43,7 @@ interface CurrentUserResponse {
 
 // Login API call
 async function loginApi(email: string, password: string): Promise<LoginResponse> {
-  const response = await fetch('https://social-app-backend-44cw.onrender.com/auth/login', {
+  const response = await fetch(NEXT_LOGIN_ENDPOINT, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -51,7 +52,8 @@ async function loginApi(email: string, password: string): Promise<LoginResponse>
   });
   
   if (!response.ok) {
-    throw new Error('Login failed');
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || `Login failed: ${response.status}`);
   }
   
   return await response.json();
@@ -59,7 +61,7 @@ async function loginApi(email: string, password: string): Promise<LoginResponse>
 
 // Register API call
 async function registerApi(username: string, full_name: string, email: string, password: string): Promise<RegisterResponse> {
-  const response = await fetch('https://social-app-backend-44cw.onrender.com/auth/register', {
+  const response = await fetch(NEXT_REGISTER_ENDPOINT, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -68,7 +70,8 @@ async function registerApi(username: string, full_name: string, email: string, p
   });
   
   if (!response.ok) {
-    throw new Error('Registration failed');
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || `Registration failed: ${response.status}`);
   }
   
   return await response.json();
@@ -76,7 +79,7 @@ async function registerApi(username: string, full_name: string, email: string, p
 
 // Get current user API call
 async function getCurrentUserApi(token: string): Promise<CurrentUserResponse> {
-  const response = await fetch('https://social-app-backend-44cw.onrender.com/auth/me', {
+  const response = await fetch(NEXT_CURRENT_USER_ENDPOINT, {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -85,7 +88,8 @@ async function getCurrentUserApi(token: string): Promise<CurrentUserResponse> {
   });
   
   if (!response.ok) {
-    throw new Error('Failed to get current user');
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || `Failed to get current user: ${response.status}`);
   }
   
   return await response.json();
@@ -102,7 +106,9 @@ function* loginWorker(action: ReturnType<typeof authActions.loginRequested>): Ge
     const { accessToken, user } = response.data;
     
     // Store token in localStorage
-    localStorage.setItem('access_token', accessToken);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('accessToken', accessToken);
+    }
     
     // Update Redux state
     yield put(
@@ -139,7 +145,9 @@ function* registerWorker(action: ReturnType<typeof authActions.registerRequested
     const { accessToken, user } = response.data;
     
     // Store token in localStorage
-    localStorage.setItem('access_token', accessToken);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('accessToken', accessToken);
+    }
     
     // Update Redux state
     yield put(
@@ -168,7 +176,9 @@ function* registerWorker(action: ReturnType<typeof authActions.registerRequested
 function* logoutWorker() {
   try {
     // Remove token from localStorage
-    localStorage.removeItem('access_token');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('accessToken');
+    }
     
     // Update Redux state
     yield put(authActions.sessionHydrated({ status: "anonymous", user: null, token: null }));
@@ -179,7 +189,8 @@ function* logoutWorker() {
 
 function* hydrateSessionWorker(): Generator {
   try {
-    const token = localStorage.getItem('access_token');
+    // Only access localStorage on client side
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
     
     if (token) {
       // Get current user info
@@ -197,7 +208,9 @@ function* hydrateSessionWorker(): Generator {
     }
   } catch {
     // Token invalid, remove it
-    localStorage.removeItem('access_token');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('accessToken');
+    }
     yield put(authActions.sessionHydrated({ status: "anonymous", user: null, token: null }));
   }
 }

@@ -113,7 +113,7 @@ export function FeedView() {
   const items = useAppSelector((s) => s.feed.items);
 
   useEffect(() => {
-    dispatch(feedActions.loadFeedRequested());
+    dispatch(feedActions.loadFeedRequested({ page: 1, limit: 10 }));
   }, [dispatch]);
 
   return (

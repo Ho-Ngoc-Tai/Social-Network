@@ -16,9 +16,38 @@ import { feedActions } from "../../stores/reducers/feed/feedSlice";
 export function ComposerCard() {
   const dispatch = useAppDispatch();
   const email = useAppSelector((s) => s.auth.email);
+  const authStatus = useAppSelector((s) => s.auth.status);
+  const { createLoading, createError } = useAppSelector((s) => s.feed);
 
   const [content, setContent] = useState("");
   const remaining = useMemo(() => 280 - content.length, [content.length]);
+
+  const handleCreatePost = () => {
+    if (content.trim().length === 0) return;
+
+    dispatch(feedActions.createPostRequested({ content: content.trim() }));
+    setContent("");
+  };
+
+  // If not authenticated, show login prompt
+  if (authStatus !== "authenticated") {
+    return (
+      <Card
+        sx={{
+          borderRadius: 3,
+          backgroundColor: "rgba(242, 243, 255, 0.6)",
+          border: "none",
+          boxShadow: "none",
+        }}
+      >
+        <CardContent sx={{ py: 3, textAlign: "center" }}>
+          <Typography variant="body2" color="text.secondary">
+            Please login to create posts
+          </Typography>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card
@@ -68,16 +97,20 @@ export function ComposerCard() {
             </Typography>
             <Button
               variant="contained"
-              disabled={content.trim().length === 0}
-              onClick={() => {
-                dispatch(feedActions.createPostRequested({ content: content.trim() }));
-                setContent("");
-              }}
+              disabled={content.trim().length === 0 || createLoading}
+              onClick={handleCreatePost}
               sx={{ py: 1, px: 3, fontWeight: 650 }}
             >
-              Post
+              {createLoading ? "Posting..." : "Post"}
             </Button>
           </Box>
+          {createError && (
+            <Box sx={{ mt: 1 }}>
+              <Typography variant="body2" color="error">
+                {createError}
+              </Typography>
+            </Box>
+          )}
         </Box>
       </CardContent>
     </Card>

@@ -1,6 +1,6 @@
 import { all, fork } from "redux-saga/effects";
 import { authSaga } from "./auth/authSaga";
-import { feedSaga } from "./feed/feedSaga";
+import { feedSaga } from "./feed/index";
 import { profileSaga } from "./profile/profileSaga";
 
 

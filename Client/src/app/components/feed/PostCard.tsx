@@ -33,7 +33,7 @@ export function PostCard({ post }: { post: Post }) {
       }}
     >
       <CardContent sx={{ display: "flex", gap: 2, py: 2.5 }}>
-        <Avatar src={post.author.avatarUrl} alt={post.author.name} sx={{ width: 48, height: 48 }} />
+        <Avatar src={post.author.avatar || undefined} alt={post.author.full_name} sx={{ width: 48, height: 48 }} />
         <Box sx={{ flex: 1 }}>
           <Box sx={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 2 }}>
             <Box sx={{ minWidth: 0 }}>
@@ -43,16 +43,11 @@ export function PostCard({ post }: { post: Post }) {
                 variant="subtitle1"
                 sx={{ fontWeight: 750, textDecoration: "none" }}
               >
-                {post.author.name}
+                {post.author.full_name}
               </Typography>
-              {post.author.headline ? (
-                <Typography variant="body2" color="text.secondary">
-                  {post.author.headline}
-                </Typography>
-              ) : null}
             </Box>
             <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
-              {formatTime(post.createdAt)}
+              {formatTime(post.created_at)}
             </Typography>
           </Box>
 
@@ -63,13 +58,13 @@ export function PostCard({ post }: { post: Post }) {
           <Box sx={{ mt: 2.5, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1.5 }}>
             <Chip
               icon={<FavoriteBorderRoundedIcon fontSize="small" />}
-              label={post.likesCount}
+              label={post.likes_count}
               variant="filled"
               sx={{ borderRadius: 999, backgroundColor: "rgba(226,231,255,1)", height: 28 }}
             />
             <Chip
               icon={<ModeCommentOutlinedIcon fontSize="small" />}
-              label={post.commentsCount}
+              label={post.comments_count}
               variant="filled"
               sx={{ borderRadius: 999, backgroundColor: "rgba(226,231,255,1)", height: 28 }}
             />

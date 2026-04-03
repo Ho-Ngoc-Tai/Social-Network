@@ -4,31 +4,58 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 export interface FeedState {
   items: Post[];
   isLoading: boolean;
+  error: string | null;
+  createLoading: boolean;
+  createError: string | null;
+  hasMore: boolean;
+  currentPage: number;
 }
 
 const initialState: FeedState = {
   items: [],
   isLoading: false,
+  error: null,
+  createLoading: false,
+  createError: null,
+  hasMore: true,
+  currentPage: 1,
 };
 
 const feedSlice = createSlice({
   name: "feed",
   initialState,
   reducers: {
-    loadFeedRequested: (state) => {
+    loadFeedRequested: (state, _action: PayloadAction<{ page?: number; limit?: number; authorId?: string }>) => {
       state.isLoading = true;
+      state.error = null;
     },
-    loadFeedSucceeded: (state, action: PayloadAction<{ items: Post[] }>) => {
-      state.items = action.payload.items;
+    loadFeedSucceeded: (state, action: PayloadAction<{ items: Post[]; hasMore: boolean; page: number }>) => {
+      if (action.payload.page === 1) {
+        // First page - replace items
+        state.items = action.payload.items;
+      } else {
+        // Additional pages - append items
+        state.items = [...state.items, ...action.payload.items];
+      }
+      state.hasMore = action.payload.hasMore;
+      state.currentPage = action.payload.page;
       state.isLoading = false;
     },
-    createPostRequested: (state, action: PayloadAction<{ content: string }>) => {
-      state.isLoading = true;
-      void action.payload;
+    loadFeedFailed: (state, action: PayloadAction<{ error: string }>) => {
+      state.error = action.payload.error;
+      state.isLoading = false;
+    },
+    createPostRequested: (state, _action: PayloadAction<{ content: string }>) => {
+      state.createLoading = true;
+      state.createError = null;
     },
     createPostSucceeded: (state, action: PayloadAction<{ post: Post }>) => {
       state.items = [action.payload.post, ...state.items];
-      state.isLoading = false;
+      state.createLoading = false;
+    },
+    createPostFailed: (state, action: PayloadAction<{ error: string }>) => {
+      state.createError = action.payload.error;
+      state.createLoading = false;
     },
   },
 });
