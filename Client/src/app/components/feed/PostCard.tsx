@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
@@ -19,14 +22,26 @@ function formatTime(iso: string) {
 }
 
 export function PostCard({ post }: { post: Post }) {
+  const router = useRouter();
+
+  const handleCardClick = () => {
+    router.push(`/posts/${post.id}`);
+  };
+
+  const handleAuthorClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
   return (
     <Card
+      onClick={handleCardClick}
       sx={{
         borderRadius: 3,
         backgroundColor: "rgba(255,255,255,0.72)",
         border: "none",
         boxShadow: "none",
         transition: "background-color 120ms ease",
+        cursor: "pointer",
         "&:hover": {
           backgroundColor: "rgba(250, 248, 255, 0.85)",
         },
@@ -40,6 +55,7 @@ export function PostCard({ post }: { post: Post }) {
               <Typography
                 component={Link}
                 href={routes.profile(post.author.id)}
+                onClick={handleAuthorClick}
                 variant="subtitle1"
                 sx={{ fontWeight: 750, textDecoration: "none" }}
               >

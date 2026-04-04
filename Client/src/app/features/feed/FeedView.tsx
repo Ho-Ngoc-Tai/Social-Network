@@ -111,10 +111,14 @@ function RightRail() {
 export function FeedView() {
   const dispatch = useAppDispatch();
   const items = useAppSelector((s) => s.feed.items);
+  const isLoading = useAppSelector((s) => s.feed.isLoading);
 
   useEffect(() => {
-    dispatch(feedActions.loadFeedRequested({ page: 1, limit: 10 }));
-  }, [dispatch]);
+    // Only load feed on initial mount if not already loaded
+    if (items.length === 0 && !isLoading) {
+      dispatch(feedActions.loadFeedRequested({ page: 1, limit: 10 }));
+    }
+  }, [dispatch, items.length, isLoading]);
 
   return (
     <AuthGate>

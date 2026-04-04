@@ -34,8 +34,10 @@ const feedSlice = createSlice({
         // First page - replace items
         state.items = action.payload.items;
       } else {
-        // Additional pages - append items
-        state.items = [...state.items, ...action.payload.items];
+        // Additional pages - append items, deduplicate by id
+        const existingIds = new Set(state.items.map(item => item.id));
+        const newItems = action.payload.items.filter(item => !existingIds.has(item.id));
+        state.items = [...state.items, ...newItems];
       }
       state.hasMore = action.payload.hasMore;
       state.currentPage = action.payload.page;

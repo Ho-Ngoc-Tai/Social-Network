@@ -123,12 +123,35 @@ async function createPostApi(content: string): Promise<CreatePostResponse> {
         'Content-Type': 'application/json',
         ...(token && { 'Authorization': `Bearer ${token}` }),
       },
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content, status: 'published' }),
     });
     
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `Failed to create post: ${response.status}`);
+      const errorData: unknown = await response.json().catch(() => ({}));
+      const message = (() => {
+        if (!errorData || typeof errorData !== 'object') return null;
+        const ed = errorData as Record<string, unknown>;
+        if (typeof ed.message === 'string' && ed.message) return ed.message;
+        if (ed.details && typeof ed.details === 'object') {
+          const nested = ed.details as Record<string, unknown>;
+          if (typeof nested.message === 'string' && nested.message) return nested.message;
+          if (nested.error && typeof nested.error === 'object') {
+            const deeper = nested.error as Record<string, unknown>;
+            if (typeof deeper.message === 'string' && deeper.message) return deeper.message;
+          }
+        }
+        return null;
+      })();
+
+      const detailsStr = (() => {
+        try {
+          return JSON.stringify(errorData);
+        } catch {
+          return '';
+        }
+      })();
+
+      throw new Error(message || `Failed to create post: ${response.status}${detailsStr ? ` | ${detailsStr}` : ''}`);
     }
     
     return await response.json();
