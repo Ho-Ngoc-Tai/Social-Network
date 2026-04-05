@@ -7,6 +7,8 @@ export interface FeedState {
   error: string | null;
   createLoading: boolean;
   createError: string | null;
+  likeLoading: Record<string, boolean>;
+  likeError: string | null;
   hasMore: boolean;
   currentPage: number;
 }
@@ -17,6 +19,8 @@ const initialState: FeedState = {
   error: null,
   createLoading: false,
   createError: null,
+  likeLoading: {},
+  likeError: null,
   hasMore: true,
   currentPage: 1,
 };
@@ -58,6 +62,21 @@ const feedSlice = createSlice({
     createPostFailed: (state, action: PayloadAction<{ error: string }>) => {
       state.createError = action.payload.error;
       state.createLoading = false;
+    },
+    likePostRequested: (state, action: PayloadAction<{ postId: string }>) => {
+      state.likeLoading[action.payload.postId] = true;
+      state.likeError = null;
+    },
+    likePostSucceeded: (state, action: PayloadAction<{ postId: string; liked: boolean; likesCount: number }>) => {
+      const post = state.items.find(p => p.id === action.payload.postId);
+      if (post) {
+        post.likes_count = action.payload.likesCount;
+      }
+      state.likeLoading[action.payload.postId] = false;
+    },
+    likePostFailed: (state, action: PayloadAction<{ postId: string; error: string }>) => {
+      state.likeLoading[action.payload.postId] = false;
+      state.likeError = action.payload.error;
     },
   },
 });

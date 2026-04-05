@@ -1,7 +1,7 @@
 import { put, takeLatest, call } from "redux-saga/effects";
 import { PayloadAction } from "@reduxjs/toolkit";
 import { feedActions } from "../../reducers/feed/feedSlice";
-import { NEXT_FEED_LIST_ENDPOINT, NEXT_FEED_CREATE_ENDPOINT } from "../../../routes/next.api";
+import { NEXT_FEED_LIST_ENDPOINT, NEXT_FEED_CREATE_ENDPOINT, NEXT_POST_LIKE_ENDPOINT } from "../../../routes/next.api";
 import { Post } from "../../../types/post/post";
 
 // API Response Types
@@ -15,6 +15,13 @@ interface FeedListResponse {
 
 interface CreatePostResponse {
   data: Post;
+  message: string;
+}
+
+interface LikePostResponse {
+  data: {
+    liked: boolean;
+  };
   message: string;
 }
 
@@ -161,6 +168,37 @@ async function createPostApi(content: string): Promise<CreatePostResponse> {
   }
 }
 
+async function likePostApi(postId: string): Promise<LikePostResponse> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  
+  try {
+    const response = await fetch(NEXT_POST_LIKE_ENDPOINT(postId), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` }),
+      },
+    });
+    
+    if (!response.ok) {
+      const errorData: unknown = await response.json().catch(() => ({}));
+      const message = (() => {
+        if (!errorData || typeof errorData !== 'object') return null;
+        const ed = errorData as Record<string, unknown>;
+        if (typeof ed.message === 'string' && ed.message) return ed.message;
+        return null;
+      })();
+
+      throw new Error(message || `Failed to toggle like: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (fetchError) {
+    console.error('Like Post Fetch Error:', fetchError);
+    throw fetchError;
+  }
+}
+
 // Saga workers
 function* loadFeedWorker(action: PayloadAction<{ page?: number; limit?: number; authorId?: string }>) {
   try {
@@ -194,7 +232,29 @@ function* createPostWorker(action: PayloadAction<{ content: string }>) {
   }
 }
 
+function* likePostWorker(action: PayloadAction<{ postId: string }>) {
+  try {
+    console.log('likePostWorker received action:', action.payload);
+    const response: LikePostResponse = yield call(likePostApi, action.payload.postId);
+    console.log('likePostApi response:', response);
+    
+    yield put(feedActions.likePostSucceeded({
+      postId: action.payload.postId,
+      liked: response.data.liked,
+      likesCount: response.data.liked ? 1 : 0,
+    }));
+    
+  } catch (error) {
+    console.error('likePostWorker error:', error);
+    yield put(feedActions.likePostFailed({
+      postId: action.payload.postId,
+      error: error instanceof Error ? error.message : 'Failed to toggle like',
+    }));
+  }
+}
+
 export function* feedSaga() {
   yield takeLatest(feedActions.loadFeedRequested.type, loadFeedWorker);
   yield takeLatest(feedActions.createPostRequested.type, createPostWorker);
+  yield takeLatest(feedActions.likePostRequested.type, likePostWorker);
 }

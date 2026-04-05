@@ -8,13 +8,17 @@ import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Chip from "@mui/material/Chip";
+import IconButton from "@mui/material/IconButton";
 import Typography from "@mui/material/Typography";
 
 import FavoriteBorderRoundedIcon from "@mui/icons-material/FavoriteBorderRounded";
+import FavoriteRoundedIcon from "@mui/icons-material/FavoriteRounded";
 import ModeCommentOutlinedIcon from "@mui/icons-material/ModeCommentOutlined";
 
 import { routes } from "../../constants/routes";
 import { Post } from "../../types/post/post";
+import { useAppDispatch, useAppSelector } from "../../hooks/storeHooks";
+import { feedActions } from "../../stores/reducers/feed/feedSlice";
 
 function formatTime(iso: string) {
   const d = new Date(iso);
@@ -23,6 +27,8 @@ function formatTime(iso: string) {
 
 export function PostCard({ post }: { post: Post }) {
   const router = useRouter();
+  const dispatch = useAppDispatch();
+  const likeLoading = useAppSelector((s) => s.feed.likeLoading[post.id] || false);
 
   const handleCardClick = () => {
     router.push(`/posts/${post.id}`);
@@ -30,6 +36,13 @@ export function PostCard({ post }: { post: Post }) {
 
   const handleAuthorClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+  };
+
+  const handleLikeClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    console.log('Like clicked for post:', post.id);
+    dispatch(feedActions.likePostRequested({ postId: post.id }));
   };
 
   return (
@@ -73,10 +86,27 @@ export function PostCard({ post }: { post: Post }) {
 
           <Box sx={{ mt: 2.5, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1.5 }}>
             <Chip
-              icon={<FavoriteBorderRoundedIcon fontSize="small" />}
+              icon={
+                <IconButton 
+                  size="small" 
+                  onClick={handleLikeClick}
+                  disabled={likeLoading}
+                  sx={{ 
+                    p: 0.5,
+                    cursor: 'pointer',
+                    '&:hover': { backgroundColor: 'rgba(255,0,0,0.1)' }
+                  }}
+                >
+                  {likeLoading ? (
+                    <Box component="span" sx={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid currentColor', borderTopColor: 'transparent', animation: 'spin 1s linear infinite' }} />
+                  ) : (
+                    <FavoriteBorderRoundedIcon fontSize="small" />
+                  )}
+                </IconButton>
+              }
               label={post.likes_count}
               variant="filled"
-              sx={{ borderRadius: 999, backgroundColor: "rgba(226,231,255,1)", height: 28 }}
+              sx={{ borderRadius: 999, backgroundColor: "rgba(226,231,255,1)", height: 32 }}
             />
             <Chip
               icon={<ModeCommentOutlinedIcon fontSize="small" />}

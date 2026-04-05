@@ -23,10 +23,11 @@ import FavoriteRoundedIcon from "@mui/icons-material/FavoriteRounded";
 import ModeCommentOutlinedIcon from "@mui/icons-material/ModeCommentOutlined";
 import ShareOutlinedIcon from "@mui/icons-material/ShareOutlined";
 
-import { useAppSelector } from "../../../hooks/storeHooks";
+import { useAppDispatch, useAppSelector } from "../../../hooks/storeHooks";
 import { NEXT_FEED_DETAIL_ENDPOINT } from "../../../routes/next.api";
 import { routes } from "../../../constants/routes";
 import { Post } from "../../../types/post/post";
+import { feedActions } from "../../../stores/reducers/feed/feedSlice";
 
 function formatFullDate(iso: string) {
   const d = new Date(iso);
@@ -42,6 +43,7 @@ function formatFullDate(iso: string) {
 export default function PostDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const [post, setPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +51,7 @@ export default function PostDetailPage() {
   
   const authStatus = useAppSelector((s) => s.auth.status);
   const currentUserEmail = useAppSelector((s) => s.auth.email);
+  const likeLoading = useAppSelector((s) => id ? s.feed.likeLoading[id] || false : false);
   const isAuthenticated = authStatus === "authenticated";
 
   useEffect(() => {
@@ -86,8 +89,9 @@ export default function PostDetailPage() {
       router.push('/login');
       return;
     }
+    if (!id) return;
     setLiked(!liked);
-    // TODO: Call like API
+    dispatch(feedActions.likePostRequested({ postId: id }));
   };
 
   const handleComment = () => {
