@@ -1,7 +1,7 @@
-import { put, takeLatest, call } from "redux-saga/effects";
+import { put, takeLatest, call, select } from "redux-saga/effects";
 import { PayloadAction } from "@reduxjs/toolkit";
 import { feedActions } from "../../reducers/feed/feedSlice";
-import { NEXT_FEED_LIST_ENDPOINT, NEXT_FEED_CREATE_ENDPOINT, NEXT_POST_LIKE_ENDPOINT } from "../../../routes/next.api";
+import { NEXT_FEED_LIST_ENDPOINT, NEXT_FEED_CREATE_ENDPOINT, NEXT_POST_LIKE_ENDPOINT, NEXT_POST_COMMENT_ENDPOINT } from "../../../routes/next.api";
 import { Post } from "../../../types/post/post";
 
 // API Response Types
@@ -21,6 +21,23 @@ interface CreatePostResponse {
 interface LikePostResponse {
   data: {
     liked: boolean;
+  };
+  message: string;
+}
+
+interface CommentPostResponse {
+  data: {
+    id: string;
+    content: string;
+    post_id: string;
+    parent: string | null;
+    author: {
+      id: string;
+      full_name: string;
+      username: string;
+      avatar: string | null;
+    };
+    created_at: string;
   };
   message: string;
 }
@@ -178,6 +195,7 @@ async function likePostApi(postId: string): Promise<LikePostResponse> {
         'Content-Type': 'application/json',
         ...(token && { 'Authorization': `Bearer ${token}` }),
       },
+      body: JSON.stringify({ status: true }), // true = like, false = unlike
     });
     
     if (!response.ok) {
@@ -238,10 +256,18 @@ function* likePostWorker(action: PayloadAction<{ postId: string }>) {
     const response: LikePostResponse = yield call(likePostApi, action.payload.postId);
     console.log('likePostApi response:', response);
     
+    // Get current post from store to calculate proper count
+    const currentPost: Post | undefined = yield select((state: { feed: { items: Post[] } }) => 
+      state.feed.items.find(p => p.id === action.payload.postId)
+    );
+    
+    const currentCount = currentPost?.likes_count || 0;
+    const newCount = response.data.liked ? currentCount + 1 : Math.max(0, currentCount - 1);
+    
     yield put(feedActions.likePostSucceeded({
       postId: action.payload.postId,
       liked: response.data.liked,
-      likesCount: response.data.liked ? 1 : 0,
+      likesCount: newCount,
     }));
     
   } catch (error) {
@@ -253,8 +279,61 @@ function* likePostWorker(action: PayloadAction<{ postId: string }>) {
   }
 }
 
+async function commentPostApi(postId: string, content: string): Promise<CommentPostResponse> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+
+  try {
+    const response = await fetch(NEXT_POST_COMMENT_ENDPOINT(postId), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` }),
+      },
+      body: JSON.stringify({ content }),
+    });
+
+    if (!response.ok) {
+      const errorData: unknown = await response.json().catch(() => ({}));
+      const message = (() => {
+        if (!errorData || typeof errorData !== 'object') return null;
+        const ed = errorData as Record<string, unknown>;
+        if (typeof ed.message === 'string' && ed.message) return ed.message;
+        return null;
+      })();
+
+      throw new Error(message || `Failed to comment: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (fetchError) {
+    console.error('Comment Post Fetch Error:', fetchError);
+    throw fetchError;
+  }
+}
+
+function* commentPostWorker(action: PayloadAction<{ postId: string; content: string }>) {
+  try {
+    console.log('commentPostWorker received action:', action.payload);
+    const response: CommentPostResponse = yield call(commentPostApi, action.payload.postId, action.payload.content);
+    console.log('commentPostApi response:', response);
+
+    yield put(feedActions.commentPostSucceeded({
+      postId: action.payload.postId,
+      comment: response.data,
+    }));
+
+  } catch (error) {
+    console.error('commentPostWorker error:', error);
+    yield put(feedActions.commentPostFailed({
+      postId: action.payload.postId,
+      error: error instanceof Error ? error.message : 'Failed to create comment',
+    }));
+  }
+}
+
 export function* feedSaga() {
   yield takeLatest(feedActions.loadFeedRequested.type, loadFeedWorker);
   yield takeLatest(feedActions.createPostRequested.type, createPostWorker);
   yield takeLatest(feedActions.likePostRequested.type, likePostWorker);
+  yield takeLatest(feedActions.commentPostRequested.type, commentPostWorker);
 }

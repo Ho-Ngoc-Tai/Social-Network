@@ -5,7 +5,8 @@ export default async function ProfilePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  const { id: encodedId } = await params;
+  const id = decodeURIComponent(encodedId);
 
   return <ProfileView id={id} />;
 }

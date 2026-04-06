@@ -1,5 +1,4 @@
 import { NextRequest } from "next/server";
-import { CORE_POST_LIKE_ENDPOINT } from "../../../../routes/core.api";
 
 class HttpError extends Error {
   status: number;
@@ -36,33 +35,31 @@ function safeJson(value: unknown) {
   }
 }
 
-const postLike = async (endpoint: string, token?: string, status?: boolean) => {
+const postComment = async (endpoint: string, content: string, token?: string) => {
   const baseUrl = process.env.API_BASE_URL || 'https://social-backend.bijancob.io.vn';
   const fullUrl = `${baseUrl}/${endpoint}`;
-  
-  console.log('Like Backend API Call:', {
+
+  console.log('Comment Backend API Call:', {
     endpoint,
     fullUrl,
-    token: token ? `${token.substring(0, 20)}...` : 'null',
-    status
+    content,
+    token: token ? `${token.substring(0, 20)}...` : 'null'
   });
-  
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
-  
+
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
-  
-  const body = status !== undefined ? JSON.stringify({ status }) : undefined;
-  
+
   let response: Response;
   try {
     response = await fetch(fullUrl, {
       method: 'POST',
       headers,
-      body,
+      body: JSON.stringify({ content }),
     });
   } catch (error) {
     throw new HttpError(
@@ -94,8 +91,7 @@ export async function POST(
 ) {
   try {
     const { id: postId } = await params;
-    
-    // Extract token from Authorization header
+
     const authHeader = req.headers.get('authorization');
     const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined;
 
@@ -106,22 +102,29 @@ export async function POST(
       );
     }
 
-    console.log('Like API Debug:', {
+    const body = await req.json().catch(() => ({}));
+    const content = typeof body.content === 'string' ? body.content.trim() : '';
+
+    if (!content) {
+      return Response.json(
+        { error: "Bad Request", message: "Content is required" },
+        { status: 400 },
+      );
+    }
+
+    console.log('Comment API Debug:', {
       postId,
+      content,
       authHeader: authHeader ? `${authHeader.substring(0, 20)}...` : 'null'
     });
 
-    // Read status from request body (true = like, false = unlike)
-    const body = await req.json().catch(() => ({}));
-    const status = typeof body.status === 'boolean' ? body.status : true; // default to like
+    const resp = await postComment(`posts/${postId}/comments`, content, token);
 
-    const resp = await postLike(CORE_POST_LIKE_ENDPOINT(postId), token, status);
-    
     return Response.json(resp);
 
   } catch (error) {
     if (error instanceof HttpError) {
-      console.error('Like Backend Error:', {
+      console.error('Comment Backend Error:', {
         status: error.status,
         message: error.message,
         details: error.payload,
@@ -136,14 +139,14 @@ export async function POST(
       );
     }
 
-    console.error('Like Unexpected Error:', error);
+    console.error('Comment Unexpected Error:', error);
 
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
 
     return Response.json(
       {
         error: errorMessage,
-        message: 'Failed to toggle like',
+        message: 'Failed to create comment',
         details: safeJson(error),
       },
       { status: 500 }

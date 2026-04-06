@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
@@ -111,14 +111,15 @@ function RightRail() {
 export function FeedView() {
   const dispatch = useAppDispatch();
   const items = useAppSelector((s) => s.feed.items);
-  const isLoading = useAppSelector((s) => s.feed.isLoading);
+  const hasMounted = useRef(false);
 
   useEffect(() => {
-    // Only load feed on initial mount if not already loaded
-    if (items.length === 0 && !isLoading) {
+    // Only load once on mount
+    if (!hasMounted.current) {
+      hasMounted.current = true;
       dispatch(feedActions.loadFeedRequested({ page: 1, limit: 10 }));
     }
-  }, [dispatch, items.length, isLoading]);
+  }, [dispatch]);
 
   return (
     <AuthGate>
@@ -127,9 +128,6 @@ export function FeedView() {
           left={<LeftRail />}
           main={
             <Stack gap={3}>
-              <Typography variant="h3" sx={{ fontWeight: 900, letterSpacing: "-0.02em" }}>
-                Main Feed
-              </Typography>
               <ComposerCard />
               <Stack gap={3}>
                 {items.map((p) => (

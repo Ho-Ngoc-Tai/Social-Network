@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 
 import Avatar from "@mui/material/Avatar";
@@ -13,6 +13,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 import Container from "@mui/material/Container";
 import Divider from "@mui/material/Divider";
 import IconButton from "@mui/material/IconButton";
+import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -48,10 +49,13 @@ export default function PostDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [liked, setLiked] = useState(false);
+  const [commentContent, setCommentContent] = useState('');
+  const [showCommentInput, setShowCommentInput] = useState(false);
   
   const authStatus = useAppSelector((s) => s.auth.status);
   const currentUserEmail = useAppSelector((s) => s.auth.email);
   const likeLoading = useAppSelector((s) => id ? s.feed.likeLoading[id] || false : false);
+  const commentLoading = useAppSelector((s) => id ? s.feed.commentLoading[id] || false : false);
   const isAuthenticated = authStatus === "authenticated";
 
   useEffect(() => {
@@ -94,13 +98,20 @@ export default function PostDetailPage() {
     dispatch(feedActions.likePostRequested({ postId: id }));
   };
 
-  const handleComment = () => {
+  const handleComment = useCallback(() => {
     if (!isAuthenticated) {
       router.push('/login');
       return;
     }
-    // TODO: Open comment input
-  };
+    setShowCommentInput(true);
+  }, [isAuthenticated, router]);
+
+  const handleSubmitComment = useCallback(() => {
+    if (!id || !commentContent.trim()) return;
+    dispatch(feedActions.commentPostRequested({ postId: id, content: commentContent.trim() }));
+    setCommentContent('');
+    setShowCommentInput(false);
+  }, [dispatch, id, commentContent]);
 
   const handleShare = () => {
     if (navigator.share) {
@@ -272,17 +283,19 @@ export default function PostDetailPage() {
             <Button
               startIcon={liked ? <FavoriteRoundedIcon color="error" /> : <FavoriteBorderRoundedIcon />}
               onClick={handleLike}
+              disabled={likeLoading}
               sx={{
                 color: liked ? "error.main" : "text.secondary",
                 fontWeight: liked ? 600 : 400,
               }}
             >
-              Like
+              {likeLoading ? 'Liking...' : 'Like'}
             </Button>
             <Button
               startIcon={<ModeCommentOutlinedIcon />}
               onClick={handleComment}
               sx={{ color: "text.secondary" }}
+              disabled={commentLoading}
             >
               Comment
             </Button>
@@ -297,11 +310,49 @@ export default function PostDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Comments Section Placeholder */}
+      {/* Comments Section */}
       <Card sx={{ borderRadius: 3, mt: 2, p: 3, backgroundColor: "rgba(242, 243, 255, 0.6)" }}>
         <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
           Comments
         </Typography>
+
+        {/* Comment Input */}
+        {showCommentInput && (
+          <Box sx={{ mb: 3 }}>
+            <TextField
+              fullWidth
+              multiline
+              rows={2}
+              placeholder="Write a comment..."
+              value={commentContent}
+              onChange={(e) => setCommentContent(e.target.value)}
+              disabled={commentLoading}
+              sx={{ mb: 1 }}
+            />
+            <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}>
+              <Button
+                size="small"
+                onClick={() => {
+                  setShowCommentInput(false);
+                  setCommentContent('');
+                }}
+                disabled={commentLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="small"
+                variant="contained"
+                onClick={handleSubmitComment}
+                disabled={!commentContent.trim() || commentLoading}
+              >
+                {commentLoading ? 'Posting...' : 'Comment'}
+              </Button>
+            </Box>
+          </Box>
+        )}
+
+        {/* Comments List Placeholder */}
         <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
           No comments yet. Be the first to comment!
         </Typography>

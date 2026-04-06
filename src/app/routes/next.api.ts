@@ -17,10 +17,14 @@ export const NEXT_POST_CREATE_ENDPOINT = "/api/posts";
 export const NEXT_POST_DETAIL_ENDPOINT = (id: string) => `/api/posts/${id}`;
 export const NEXT_POST_UPDATE_ENDPOINT = (id: string) => `/api/posts/${id}`;
 export const NEXT_POST_LIKE_ENDPOINT = (id: string) => `/api/posts/${id}/like`;
-export const NEXT_POST_COMMENT_ENDPOINT = (id: string) => `/api/posts/${id}/comment`;
+export const NEXT_POST_COMMENT_ENDPOINT = (id: string) => `/api/posts/${id}/comments`;
 
 // User
-export const NEXT_USER_PROFILE_ENDPOINT = (id: string) => `/api/user/${id}/profile`;
+export const NEXT_USER_PROFILE_ENDPOINT = (id: string) => `/api/users/${id}/profile`;
 export const NEXT_USER_UPDATE_ENDPOINT = "/api/user/profile/update";
-export const NEXT_USER_FOLLOW_ENDPOINT = (id: string) => `/api/user/${id}/follow`;
-export const NEXT_USER_UNFOLLOW_ENDPOINT = (id: string) => `/api/user/${id}/unfollow`;
+export const NEXT_USER_FRIEND_ENDPOINT = (id: string) => `/api/users/${id}/friend`;
+export const NEXT_USER_UNFRIEND_ENDPOINT = (id: string) => `/api/users/${id}/unfriend`;
+
+// Notifications
+export const NEXT_NOTIFICATIONS_ENDPOINT = "/api/notifications";
+export const NEXT_NOTIFICATIONS_UNREAD_COUNT_ENDPOINT = "/api/notifications/unread-count";

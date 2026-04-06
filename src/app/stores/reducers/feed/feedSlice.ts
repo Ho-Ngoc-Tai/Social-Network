@@ -9,6 +9,8 @@ export interface FeedState {
   createError: string | null;
   likeLoading: Record<string, boolean>;
   likeError: string | null;
+  commentLoading: Record<string, boolean>;
+  commentError: string | null;
   hasMore: boolean;
   currentPage: number;
 }
@@ -21,6 +23,8 @@ const initialState: FeedState = {
   createError: null,
   likeLoading: {},
   likeError: null,
+  commentLoading: {},
+  commentError: null,
   hasMore: true,
   currentPage: 1,
 };
@@ -29,7 +33,8 @@ const feedSlice = createSlice({
   name: "feed",
   initialState,
   reducers: {
-    loadFeedRequested: (state, _action: PayloadAction<{ page?: number; limit?: number; authorId?: string }>) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    loadFeedRequested: (state, _action: PayloadAction<{ page?: number; limit?: number }>) => {
       state.isLoading = true;
       state.error = null;
     },
@@ -51,7 +56,7 @@ const feedSlice = createSlice({
       state.error = action.payload.error;
       state.isLoading = false;
     },
-    createPostRequested: (state, _action: PayloadAction<{ content: string }>) => {
+    createPostRequested: (state, action: PayloadAction<{ content: string }>) => {
       state.createLoading = true;
       state.createError = null;
     },
@@ -77,6 +82,21 @@ const feedSlice = createSlice({
     likePostFailed: (state, action: PayloadAction<{ postId: string; error: string }>) => {
       state.likeLoading[action.payload.postId] = false;
       state.likeError = action.payload.error;
+    },
+    commentPostRequested: (state, action: PayloadAction<{ postId: string; content: string }>) => {
+      state.commentLoading[action.payload.postId] = true;
+      state.commentError = null;
+    },
+    commentPostSucceeded: (state, action: PayloadAction<{ postId: string; comment: { id: string; content: string; author: { id: string; full_name: string; avatar: string | null }; created_at: string } }>) => {
+      const post = state.items.find(p => p.id === action.payload.postId);
+      if (post) {
+        post.comments_count += 1;
+      }
+      state.commentLoading[action.payload.postId] = false;
+    },
+    commentPostFailed: (state, action: PayloadAction<{ postId: string; error: string }>) => {
+      state.commentLoading[action.payload.postId] = false;
+      state.commentError = action.payload.error;
     },
   },
 });

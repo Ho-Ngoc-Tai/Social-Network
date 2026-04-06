@@ -18,12 +18,15 @@ import { routes } from "../../constants/routes";
 import { useAppDispatch, useAppSelector } from "../../hooks/storeHooks";
 import { BrandMark } from "../ui/BrandMark";
 import { authActions } from "../../stores/reducers/auth/authSlice";
+import { NotificationBell } from "../notification/NotificationBell";
 
 
 export function TopNav() {
   const dispatch = useAppDispatch();
   const status = useAppSelector((s) => s.auth.status);
   const email = useAppSelector((s) => s.auth.email);
+  const user = useAppSelector((s) => s.auth.user);
+  const userId = user?.id;
 
   return (
     <AppBar position="sticky" sx={{ backdropFilter: "blur(16px)", backgroundColor: "rgba(242, 243, 255, 0.85)" }}>
@@ -59,7 +62,12 @@ export function TopNav() {
           <Box sx={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: 2 }}>
             {status === "authenticated" ? (
               <>
-                <IconButton component={Link} href={routes.profile("1")} sx={{ p: 0.5 }}>
+                <NotificationBell />
+                <IconButton 
+                  component={Link} 
+                  href={userId ? routes.profile(encodeURIComponent(userId)) : '#'} 
+                  sx={{ p: 0.5 }}
+                >
                   <Avatar
                     alt={email ?? "User"}
                     src="https://i.pravatar.cc/120?img=32"

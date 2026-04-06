@@ -21,9 +21,11 @@ export function ProfileView({ id }: { id: string }) {
   const dispatch = useAppDispatch();
   const user = useAppSelector((s) => s.profile.user);
   const posts = useAppSelector((s) => s.profile.posts);
+  const friendStatus = useAppSelector((s) => s.profile.friendStatus);
+  const isLoading = useAppSelector((s) => s.profile.isLoading);
 
   useEffect(() => {
-    dispatch(profileActions.loadProfileRequested({ id }));
+    dispatch(profileActions.loadProfileRequested({ userId: id, page: 1, limit: 10 }));
   }, [dispatch, id]);
 
   return (
@@ -42,8 +44,8 @@ export function ProfileView({ id }: { id: string }) {
             <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 3 }}>
               <Box sx={{ display: "flex", alignItems: "center", gap: 3, mt: -6 }}>
                 <Avatar
-                  src={user?.avatarUrl}
-                  alt={user?.name ?? "User"}
+                  src={undefined}
+                  alt={user?.full_name ?? "User"}
                   sx={{
                     width: 96,
                     height: 96,
@@ -52,40 +54,48 @@ export function ProfileView({ id }: { id: string }) {
                 />
                 <Box sx={{ pt: 4 }}>
                   <Typography variant="h3" sx={{ fontWeight: 900, letterSpacing: "-0.02em" }}>
-                    {user?.name ?? "…"}
+                    {user?.full_name ?? "…"}
                   </Typography>
                   <Typography variant="body1" color="text.secondary">
-                    {user?.headline ?? ""}
+                    @{user?.username ?? ""}
                   </Typography>
                 </Box>
               </Box>
 
               <Stack direction="row" gap={1.5} sx={{ pt: 2, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                <StatPill label="Posts" value={user?.stats?.posts ?? 0} />
-                <StatPill label="Followers" value={user?.stats?.followers ?? 0} />
-                <StatPill label="Following" value={user?.stats?.following ?? 0} />
+                <StatPill label="Posts" value={posts.length} />
+                <StatPill label="Friends" value={friendStatus?.is_friend ? 1 : 0} />
               </Stack>
             </Box>
 
-            {user?.bio ? (
+            {user?.profile?.address ? (
               <Typography variant="body1" sx={{ mt: 3 }}>
-                {user.bio}
+                📍 {user.profile.address}
+              </Typography>
+            ) : null}
+            {user?.profile?.phone ? (
+              <Typography variant="body1" sx={{ mt: 1 }}>
+                📞 {user.profile.phone}
               </Typography>
             ) : null}
 
             <Tabs value={0} sx={{ mt: 3 }}>
-              <Tab label="Posts" />
-              <Tab label="Media" disabled />
-              <Tab label="Likes" disabled />
+              <Tab label={`Posts (${posts.length})`} />
             </Tabs>
           </CardContent>
         </Card>
 
-        <Stack gap={3}>
-          {posts.map((p) => (
-            <PostCard key={p.id} post={p} />
-          ))}
-        </Stack>
+        {isLoading ? (
+          <Box sx={{ p: 4, textAlign: "center" }}>
+            <Typography>Loading...</Typography>
+          </Box>
+        ) : (
+          <Stack gap={3}>
+            {posts.map((p) => (
+              <PostCard key={p.id} post={p} />
+            ))}
+          </Stack>
+        )}
       </Stack>
     </div>
   );
