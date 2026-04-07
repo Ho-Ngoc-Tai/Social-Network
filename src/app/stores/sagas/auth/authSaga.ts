@@ -209,7 +209,7 @@ function* hydrateSessionWorker(): Generator {
     } else {
       yield put(authActions.sessionHydrated({ status: "anonymous", user: null, token: null }));
     }
-  } catch (error) {
+  } catch {
     // Token invalid, remove it
     if (typeof window !== 'undefined') {
       localStorage.removeItem('accessToken');

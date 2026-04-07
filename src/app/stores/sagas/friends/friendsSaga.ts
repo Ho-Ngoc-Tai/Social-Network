@@ -55,10 +55,8 @@ async function sendFriendRequestApi(userId: string): Promise<{ data: Friend; mes
 
 function* sendFriendRequestWorker(action: PayloadAction<{ userId: string }>) {
   try {
-    const response: { data: Friend; message: string } = yield call(sendFriendRequestApi, action.payload.userId);
+    yield call(sendFriendRequestApi, action.payload.userId);
     yield put(friendsActions.sendFriendRequestSucceeded());
-    // Optionally reload friends list after sending request
-    yield put(friendsActions.loadFriendsRequested());
   } catch (error) {
     yield put(friendsActions.sendFriendRequestFailed({
       error: error instanceof Error ? error.message : 'Failed to send friend request',
