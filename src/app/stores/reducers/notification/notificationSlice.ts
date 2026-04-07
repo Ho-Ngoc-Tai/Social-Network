@@ -23,7 +23,7 @@ export const notificationSlice = createSlice({
   name: "notification",
   initialState,
   reducers: {
-    loadNotificationsRequested: (state, action: PayloadAction<{ limit?: number; cursor?: string }>) => {
+    loadNotificationsRequested: (state) => {
       state.isLoading = true;
       state.error = null;
     },
@@ -36,7 +36,12 @@ export const notificationSlice = createSlice({
       state.items = [...uniqueNewItems, ...state.items];
       state.hasMore = action.payload.has_more;
       state.nextCursor = action.payload.next_cursor;
-      state.unreadCount = action.payload.unread_count ?? uniqueNewItems.filter(n => !n.is_read).length;
+      // If unread_count is provided, add it to existing count (for real-time notifications)
+      if (action.payload.unread_count !== undefined && action.payload.unread_count > 0) {
+        state.unreadCount += action.payload.unread_count;
+      } else {
+        state.unreadCount = uniqueNewItems.filter(n => !n.is_read).length;
+      }
       state.isLoading = false;
     },
     loadNotificationsFailed: (state, action: PayloadAction<{ error: string }>) => {
@@ -64,6 +69,17 @@ export const notificationSlice = createSlice({
     },
     fetchUnreadCountFailed: () => {
       // Silently fail for unread count
+    },
+    // Real-time notification received via socket
+    receiveRealtimeNotification: (state, action: PayloadAction<{ notification: Notification }>) => {
+      const notification = action.payload.notification;
+      // Add to top if not exists
+      if (!state.items.find(n => n.id === notification.id)) {
+        state.items.unshift(notification);
+        if (!notification.is_read) {
+          state.unreadCount += 1;
+        }
+      }
     },
   },
 });

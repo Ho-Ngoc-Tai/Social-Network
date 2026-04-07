@@ -4,10 +4,10 @@ export type AuthStatus = "anonymous" | "authenticated";
 
 export interface User {
   id: string;
-  username: string;
-  full_name: string;
-  email: string;
-  status: "ACTIVE" | "BLOCK";
+  username?: string;
+  full_name?: string;
+  email?: string;
+  status?: "ACTIVE" | "BLOCK";
 }
 
 export interface AuthState {

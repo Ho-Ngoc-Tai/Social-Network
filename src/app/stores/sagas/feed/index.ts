@@ -54,17 +54,6 @@ async function loadFeedApi(params: { page?: number; limit?: number; authorId?: s
   // Get token from localStorage
   const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
   
-  console.log('Feed API Debug:', {
-    url,
-    token: token ? `${token.substring(0, 20)}...` : 'null',
-    tokenLength: token?.length || 0,
-    params,
-    localStorage: typeof window !== 'undefined' ? {
-      accessToken: localStorage.getItem('accessToken') ? 'exists' : 'null',
-      keys: Object.keys(localStorage)
-    } : 'server-side'
-  });
-  
   try {
     const response = await fetch(url, {
       method: 'GET',
@@ -74,51 +63,22 @@ async function loadFeedApi(params: { page?: number; limit?: number; authorId?: s
       },
     });
     
-    console.log('Feed API Response:', {
-      status: response.status,
-      statusText: response.statusText,
-      url: response.url,
-      headers: Object.fromEntries(response.headers.entries()),
-      ok: response.ok
-    });
-    
-    console.log('About to check response.ok:', response.ok);
-  
   if (!response.ok) {
     // Debug exact status first
-    console.log('Response Status Debug:', {
-      status: response.status,
-      statusText: response.statusText,
-      ok: response.ok,
-      url: response.url
-    });
     
     // Try to parse error safely
     let errorData: Record<string, unknown> = {};
     try {
       errorData = await response.json();
-    } catch (jsonError) {
-      console.error('JSON Parse Error:', jsonError);
+    } catch {
       errorData = { 
         error: `HTTP error! status: ${response.status}`,
         message: `Failed to load feed: ${response.status}`
       };
     }
     
-    console.error('Feed API Error:', errorData);
-    
-    // Debug response status vs errorData
-    console.log('Status Comparison:', {
-      responseStatus: response.status,
-      errorDataError: errorData.error,
-      errorDataMessage: (errorData as { message?: string }).message,
-      isStatus401: response.status === 401,
-      errorContains401: typeof errorData.error === 'string' && errorData.error.includes('401')
-    });
-    
     // Auto-logout on 401 OR if error contains 401
     if (response.status === 401 || (typeof errorData.error === 'string' && errorData.error.includes('401'))) {
-      console.log('Token expired, logging out...');
       if (typeof window !== 'undefined') {
         localStorage.removeItem('accessToken');
         // Redirect to login page
@@ -131,7 +91,6 @@ async function loadFeedApi(params: { page?: number; limit?: number; authorId?: s
   
   return await response.json();
 } catch (fetchError) {
-  console.error('Fetch Error:', fetchError);
   throw fetchError;
 }
 }
@@ -180,7 +139,6 @@ async function createPostApi(content: string): Promise<CreatePostResponse> {
     
     return await response.json();
   } catch (fetchError) {
-    console.error('Create Post Fetch Error:', fetchError);
     throw fetchError;
   }
 }
@@ -212,7 +170,6 @@ async function likePostApi(postId: string): Promise<LikePostResponse> {
     
     return await response.json();
   } catch (fetchError) {
-    console.error('Like Post Fetch Error:', fetchError);
     throw fetchError;
   }
 }
@@ -252,9 +209,7 @@ function* createPostWorker(action: PayloadAction<{ content: string }>) {
 
 function* likePostWorker(action: PayloadAction<{ postId: string }>) {
   try {
-    console.log('likePostWorker received action:', action.payload);
     const response: LikePostResponse = yield call(likePostApi, action.payload.postId);
-    console.log('likePostApi response:', response);
     
     // Get current post from store to calculate proper count
     const currentPost: Post | undefined = yield select((state: { feed: { items: Post[] } }) => 
@@ -271,7 +226,6 @@ function* likePostWorker(action: PayloadAction<{ postId: string }>) {
     }));
     
   } catch (error) {
-    console.error('likePostWorker error:', error);
     yield put(feedActions.likePostFailed({
       postId: action.payload.postId,
       error: error instanceof Error ? error.message : 'Failed to toggle like',
@@ -306,16 +260,13 @@ async function commentPostApi(postId: string, content: string): Promise<CommentP
 
     return await response.json();
   } catch (fetchError) {
-    console.error('Comment Post Fetch Error:', fetchError);
     throw fetchError;
   }
 }
 
 function* commentPostWorker(action: PayloadAction<{ postId: string; content: string }>) {
   try {
-    console.log('commentPostWorker received action:', action.payload);
     const response: CommentPostResponse = yield call(commentPostApi, action.payload.postId, action.payload.content);
-    console.log('commentPostApi response:', response);
 
     yield put(feedActions.commentPostSucceeded({
       postId: action.payload.postId,
@@ -323,7 +274,6 @@ function* commentPostWorker(action: PayloadAction<{ postId: string; content: str
     }));
 
   } catch (error) {
-    console.error('commentPostWorker error:', error);
     yield put(feedActions.commentPostFailed({
       postId: action.payload.postId,
       error: error instanceof Error ? error.message : 'Failed to create comment',

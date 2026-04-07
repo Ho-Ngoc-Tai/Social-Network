@@ -40,13 +40,6 @@ const postLike = async (endpoint: string, token?: string, status?: boolean) => {
   const baseUrl = process.env.API_BASE_URL || 'https://social-backend.bijancob.io.vn';
   const fullUrl = `${baseUrl}/${endpoint}`;
   
-  console.log('Like Backend API Call:', {
-    endpoint,
-    fullUrl,
-    token: token ? `${token.substring(0, 20)}...` : 'null',
-    status
-  });
-  
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
@@ -106,11 +99,6 @@ export async function POST(
       );
     }
 
-    console.log('Like API Debug:', {
-      postId,
-      authHeader: authHeader ? `${authHeader.substring(0, 20)}...` : 'null'
-    });
-
     // Read status from request body (true = like, false = unlike)
     const body = await req.json().catch(() => ({}));
     const status = typeof body.status === 'boolean' ? body.status : true; // default to like
@@ -135,8 +123,6 @@ export async function POST(
         { status: error.status },
       );
     }
-
-    console.error('Like Unexpected Error:', error);
 
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
 

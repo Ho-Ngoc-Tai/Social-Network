@@ -13,6 +13,8 @@ import TextField from "@mui/material/TextField";
 import Toolbar from "@mui/material/Toolbar";
 
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
+import PeopleAltRoundedIcon from "@mui/icons-material/PeopleAltRounded";
+import ChatRoundedIcon from "@mui/icons-material/ChatRounded";
 
 import { routes } from "../../constants/routes";
 import { useAppDispatch, useAppSelector } from "../../hooks/storeHooks";
@@ -63,6 +65,22 @@ export function TopNav() {
             {status === "authenticated" ? (
               <>
                 <NotificationBell />
+                <IconButton
+                  component={Link}
+                  href={routes.friends}
+                  sx={{ p: 0.5 }}
+                  aria-label="Friends"
+                >
+                  <PeopleAltRoundedIcon />
+                </IconButton>
+                <IconButton
+                  component={Link}
+                  href={routes.chat}
+                  sx={{ p: 0.5 }}
+                  aria-label="Chat"
+                >
+                  <ChatRoundedIcon />
+                </IconButton>
                 <IconButton 
                   component={Link} 
                   href={userId ? routes.profile(encodeURIComponent(userId)) : '#'} 

@@ -40,10 +40,6 @@ const getUnreadCount = async (token: string) => {
     const baseUrl = process.env.API_BASE_URL || 'https://social-backend.bijancob.io.vn';
     const fullUrl = `${baseUrl}/notifications/unread-count`;
     
-    console.log('Unread Count Backend API Call:', {
-      fullUrl,
-      token: token ? `${token.substring(0, 20)}...` : 'null'
-    });
     
     const headers: Record<string, string> = {};
     if (token) {
@@ -94,10 +90,6 @@ export async function GET(req: NextRequest) {
         { status: 401 },
       );
     }
-
-    console.log('Unread Count API Debug:', {
-      authHeader: authHeader ? `${authHeader.substring(0, 20)}...` : 'null'
-    });
 
     const resp = await getUnreadCount(token);
 

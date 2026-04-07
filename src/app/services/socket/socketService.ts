@@ -1,0 +1,101 @@
+import { env } from "@/app/config/env";
+import { io, Socket } from "socket.io-client";
+
+export type NotificationAction = "FRIEND_REQ" | "FRIEND_ACCEPT" | "like" | "comment" | "follow" | "mention" | "post";
+
+export interface SocketNotification {
+  id: string;
+  action: NotificationAction;
+  title: string;
+  content: string;
+  is_read: boolean;
+  created_at: string;
+  actor?: {
+    id: string;
+    full_name: string;
+    avatar: string | null;
+  };
+  target?: {
+    id: string;
+    type: "post" | "comment" | "user";
+  };
+}
+
+class SocketService {
+  private socket: Socket | null = null;
+  private listeners: Map<string, Set<(data: unknown) => void>> = new Map();
+
+  connect(token: string): void {
+    if (this.socket?.connected) {
+      return;
+    }
+
+    this.socket = io(env.socketUrl, {
+      transports: ["websocket", "polling"],
+      auth: {
+        token,
+      },
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    });
+
+    this.socket.on("connect", () => {
+      console.log("[Socket] Connected:", this.socket?.id);
+    });
+
+    this.socket.on("disconnect", (reason: string) => {
+      console.log("[Socket] Disconnected:", reason);
+    });
+
+    this.socket.on("connect_error", (error: Error) => {
+      console.error("[Socket] Connection error:", error.message);
+    });
+
+    // Listen for new_notification event
+    this.socket.on("new_notification", (data: SocketNotification) => {
+      console.log("[Socket] New notification:", data);
+      this.emit("new_notification", data);
+    });
+  }
+
+  disconnect(): void {
+    if (this.socket) {
+      this.socket.disconnect();
+      this.socket = null;
+    }
+    this.listeners.clear();
+  }
+
+  isConnected(): boolean {
+    return this.socket?.connected ?? false;
+  }
+
+  on(event: string, callback: (data: unknown) => void): () => void {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, new Set());
+    }
+    this.listeners.get(event)!.add(callback);
+
+    // Return unsubscribe function
+    return () => {
+      this.listeners.get(event)?.delete(callback);
+    };
+  }
+
+  off(event: string, callback: (data: unknown) => void): void {
+    this.listeners.get(event)?.delete(callback);
+  }
+
+  private emit(event: string, data: unknown): void {
+    this.listeners.get(event)?.forEach((callback) => {
+      try {
+        callback(data);
+      } catch (error) {
+        console.error(`[Socket] Error in listener for ${event}:`, error);
+      }
+    });
+  }
+}
+
+export const socketService = new SocketService();

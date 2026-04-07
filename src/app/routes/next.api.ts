@@ -25,6 +25,16 @@ export const NEXT_USER_UPDATE_ENDPOINT = "/api/user/profile/update";
 export const NEXT_USER_FRIEND_ENDPOINT = (id: string) => `/api/users/${id}/friend`;
 export const NEXT_USER_UNFRIEND_ENDPOINT = (id: string) => `/api/users/${id}/unfriend`;
 
+// Friends
+export const NEXT_FRIENDS_LIST_ENDPOINT = "/api/users/friends";
+
+// Chat
+export const NEXT_CONVERSATIONS_ENDPOINT = "/api/conversations";
+export const NEXT_OPEN_CONVERSATION_ENDPOINT = "/api/conversations/open";
+export const NEXT_CONVERSATION_MESSAGES_ENDPOINT = (userId: string) => `/api/conversations/thread/${userId}/messages`;
+export const NEXT_SEND_MESSAGE_ENDPOINT = "/api/conversations/messages";
+export const NEXT_MARK_AS_READ_ENDPOINT = (userId: string) => `/api/conversations/thread/${userId}/read`;
+
 // Notifications
 export const NEXT_NOTIFICATIONS_ENDPOINT = "/api/notifications";
 export const NEXT_NOTIFICATIONS_UNREAD_COUNT_ENDPOINT = "/api/notifications/unread-count";

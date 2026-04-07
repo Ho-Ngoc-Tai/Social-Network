@@ -3,10 +3,14 @@ import { authReducer } from "./auth/authSlice";
 import { feedReducer } from "./feed/feedSlice";
 import { profileReducer } from "./profile/profileSlice";
 import { notificationReducer } from "./notification/notificationSlice";
+import { friendsReducer } from "./friends/friendsSlice";
+import { chatReducer } from "./chat/chatSlice";
 
 export const rootReducer = combineReducers({
   auth: authReducer,
   feed: feedReducer,
   profile: profileReducer,
   notification: notificationReducer,
+  friends: friendsReducer,
+  chat: chatReducer,
 });

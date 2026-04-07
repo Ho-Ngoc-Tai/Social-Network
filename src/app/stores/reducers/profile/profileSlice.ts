@@ -14,7 +14,7 @@ const initialState: ProfileState = {
   posts: [],
   friendStatus: null,
   isLoading: false,
-  error: null,
+  error: null, 
 };
 
 const profileSlice = createSlice({

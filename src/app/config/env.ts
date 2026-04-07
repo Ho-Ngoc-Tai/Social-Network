@@ -3,6 +3,9 @@ export const env = {
   // API URLs
   apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || 'https://social-backend.bijancob.io.vn',
   
+  // Socket URL (usually same as API but without /api path)
+  socketUrl: process.env.NEXT_PUBLIC_SOCKET_URL || process.env.SOCKET_URL || 'https://social-backend.bijancob.io.vn',
+  
   // Domain URLs
   domainUrl: process.env.NEXT_PUBLIC_DOMAIN_URL || process.env.DOMAIN_URL || 'http://localhost:3000',
   

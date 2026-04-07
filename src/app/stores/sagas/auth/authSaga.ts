@@ -1,5 +1,5 @@
 import { put, takeLatest, call } from "redux-saga/effects";
-import { authActions } from "../../reducers/auth/authSlice";
+import { authActions, User } from "../../reducers/auth/authSlice";
 import { NEXT_LOGIN_ENDPOINT, NEXT_REGISTER_ENDPOINT, NEXT_CURRENT_USER_ENDPOINT } from "../../../routes/next.api";
 
 // API Response Types
@@ -92,7 +92,8 @@ async function getCurrentUserApi(token: string): Promise<CurrentUserResponse> {
     throw new Error(errorData.message || `Failed to get current user: ${response.status}`);
   }
   
-  return await response.json();
+  const data = await response.json();
+  return data;
 }
 
 function* loginWorker(action: ReturnType<typeof authActions.loginRequested>): Generator {
@@ -196,17 +197,19 @@ function* hydrateSessionWorker(): Generator {
       // Get current user info
       const response = yield call(getCurrentUserApi, token);
       
+      const user = response.data as User | undefined;
+      
       yield put(
         authActions.sessionHydrated({
-          status: "authenticated",
-          user: response.data,
+          status: user ? "authenticated" : "anonymous",
+          user: user || null,
           token: token,
         }),
       );
     } else {
       yield put(authActions.sessionHydrated({ status: "anonymous", user: null, token: null }));
     }
-  } catch {
+  } catch (error) {
     // Token invalid, remove it
     if (typeof window !== 'undefined') {
       localStorage.removeItem('accessToken');
