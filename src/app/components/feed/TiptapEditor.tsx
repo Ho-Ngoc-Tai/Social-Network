@@ -2,12 +2,17 @@
 
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import Image from "@tiptap/extension-image";
+import ImageExtension from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
+import NextImage from "next/image";
+import { useState, useRef, ChangeEvent, forwardRef, useImperativeHandle } from "react";
 
 import Box from "@mui/material/Box";
 import IconButton from "@mui/material/IconButton";
+import Button from "@mui/material/Button";
+import AddIcon from "@mui/icons-material/Add";
+import CloseIcon from "@mui/icons-material/Close";
 
 import FormatBoldIcon from "@mui/icons-material/FormatBold";
 import FormatItalicIcon from "@mui/icons-material/FormatItalic";
@@ -16,19 +21,32 @@ import FormatListNumberedIcon from "@mui/icons-material/FormatListNumbered";
 import LinkIcon from "@mui/icons-material/Link";
 import ImageIcon from "@mui/icons-material/Image";
 
+interface SelectedImage {
+  file: File;
+  previewUrl: string;
+}
+
+export interface TiptapEditorRef {
+  clearImages: () => void;
+}
+
 interface TiptapEditorProps {
   content: string;
   onChange: (content: string, html: string) => void;
   placeholder?: string;
-  onImageUpload?: (file: File) => Promise<string>;
+  onImagesSelected?: (images: SelectedImage[]) => void;
+  maxImages?: number;
 }
 
-export function TiptapEditor({
+export const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(function TiptapEditor({
   content,
   onChange,
   placeholder = "What's on your mind?",
-  onImageUpload,
-}: TiptapEditorProps) {
+  onImagesSelected,
+  maxImages = 6,
+}: TiptapEditorProps,
+  ref: React.Ref<TiptapEditorRef>
+) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -36,9 +54,12 @@ export function TiptapEditor({
           levels: [1, 2, 3],
         },
       }),
-      Image.configure({
+      ImageExtension.configure({
         inline: true,
         allowBase64: true,
+        HTMLAttributes: {
+          class: 'editor-image',
+        },
       }),
       Link.configure({
         openOnClick: false,
@@ -57,22 +78,49 @@ export function TiptapEditor({
     },
   });
 
+  const [showImageGrid, setShowImageGrid] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Expose clearImages method to parent
+  useImperativeHandle(ref, () => ({
+    clearImages: () => {
+      setSelectedImages([]);
+      setShowImageGrid(false);
+      onImagesSelected?.([]);
+    },
+  }));
+
   if (!editor) {
     return null;
   }
 
-  const handleImageUpload = async () => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file && onImageUpload) {
-        const url = await onImageUpload(file);
-        editor.chain().focus().setImage({ src: url }).run();
-      }
-    };
-    input.click();
+  const handleImageButtonClick = () => {
+    setShowImageGrid(!showImageGrid);
+  };
+
+  const handleAddImageClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && selectedImages.length < maxImages) {
+      const previewUrl = URL.createObjectURL(file);
+      const newImages = [...selectedImages, { file, previewUrl }];
+      setSelectedImages(newImages);
+      onImagesSelected?.(newImages);
+    }
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveImage = (index: number) => {
+    const newImages = selectedImages.filter((_, i) => i !== index);
+    setSelectedImages(newImages);
+    onImagesSelected?.(newImages);
   };
 
   const setLink = () => {
@@ -124,8 +172,8 @@ export function TiptapEditor({
     },
     {
       icon: ImageIcon,
-      action: handleImageUpload,
-      isActive: false,
+      action: handleImageButtonClick,
+      isActive: showImageGrid,
       title: "Image",
     },
   ];
@@ -171,6 +219,90 @@ export function TiptapEditor({
           </IconButton>
         ))}
       </Box>
+
+      {/* Image Grid Selector */}
+      {showImageGrid && (
+        <Box sx={{ p: 2, borderBottom: "1px solid", borderColor: "rgba(0,0,0,0.08)" }}>
+          <input
+            type="file"
+            accept="image/*"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            style={{ display: 'none' }}
+          />
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: 1,
+              maxWidth: 320,
+            }}
+          >
+            {/* Selected Images */}
+            {selectedImages.map((img, index) => (
+              <Box
+                key={index}
+                sx={{
+                  position: 'relative',
+                  aspectRatio: '1',
+                  borderRadius: 1,
+                  overflow: 'hidden',
+                  border: '1px solid',
+                  borderColor: 'rgba(0,0,0,0.12)',
+                }}
+              >
+                <NextImage
+                  src={img.previewUrl}
+                  alt={`Selected ${index + 1}`}
+                  fill
+                  style={{ objectFit: 'cover' }}
+                  unoptimized
+                />
+                <IconButton
+                  size="small"
+                  onClick={() => handleRemoveImage(index)}
+                  sx={{
+                    position: 'absolute',
+                    top: 4,
+                    right: 4,
+                    bgcolor: 'rgba(0,0,0,0.5)',
+                    color: 'white',
+                    p: 0.5,
+                    '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' },
+                  }}
+                >
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              </Box>
+            ))}
+            {/* Add Button */}
+            {selectedImages.length < maxImages && (
+              <Button
+                onClick={handleAddImageClick}
+                sx={{
+                  aspectRatio: '1',
+                  border: '2px dashed',
+                  borderColor: 'rgba(0,0,0,0.2)',
+                  borderRadius: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 0.5,
+                  color: 'text.secondary',
+                  '&:hover': {
+                    borderColor: 'primary.main',
+                    color: 'primary.main',
+                    bgcolor: 'rgba(25,118,210,0.04)',
+                  },
+                }}
+              >
+                <AddIcon />
+              </Button>
+            )}
+          </Box>
+        </Box>
+      )}
 
       {/* Editor Content */}
       <Box
@@ -222,4 +354,4 @@ export function TiptapEditor({
       </Box>
     </Box>
   );
-}
+});

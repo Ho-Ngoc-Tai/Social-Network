@@ -1,8 +1,8 @@
 import { put, takeLatest, call } from "redux-saga/effects";
 import { PayloadAction } from "@reduxjs/toolkit";
 import { profileActions } from "../../reducers/profile/profileSlice";
-import { NEXT_USER_PROFILE_ENDPOINT } from "../../../routes/next.api";
-import { UserProfileResponse } from "../../../types/profile/profile";
+import { NEXT_USER_PROFILE_ENDPOINT, NEXT_USER_PATCH_ENDPOINT } from "../../../routes/next.api";
+import { UserProfileResponse, UserProfileData } from "../../../types/profile/profile";
 
 async function loadUserProfileApi(userId: string, page?: number, limit?: number): Promise<UserProfileResponse> {
   const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
@@ -63,6 +63,50 @@ function* loadUserProfileWorker(action: PayloadAction<{ userId: string; page?: n
   }
 }
 
+async function updateProfileApi(userId: string, data: Partial<UserProfileData>): Promise<{ data: UserProfileData }> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  const url = NEXT_USER_PATCH_ENDPOINT(userId);
+
+  const response = await fetch(url, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }),
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const errorData: unknown = await response.json().catch(() => ({}));
+    const message = (() => {
+      if (!errorData || typeof errorData !== 'object') return null;
+      const ed = errorData as Record<string, unknown>;
+      if (typeof ed.message === 'string' && ed.message) return ed.message;
+      return null;
+    })();
+    throw new Error(message || `Failed to update profile: ${response.status}`);
+  }
+
+  return await response.json();
+}
+
+function* updateProfileWorker(action: PayloadAction<{ userId: string; data: Partial<UserProfileData> }>) {
+  try {
+    const response: { data: UserProfileData } = yield call(
+      updateProfileApi,
+      action.payload.userId,
+      action.payload.data,
+    );
+
+    yield put(profileActions.updateProfileSucceeded({ user: response.data }));
+  } catch (error) {
+    yield put(profileActions.updateProfileFailed({
+      error: error instanceof Error ? error.message : 'Failed to update profile',
+    }));
+  }
+}
+
 export function* profileSaga() {
   yield takeLatest(profileActions.loadProfileRequested.type, loadUserProfileWorker);
+  yield takeLatest(profileActions.updateProfileRequested.type, updateProfileWorker);
 }

@@ -19,6 +19,9 @@ export const CORE_POST_UPDATE_ENDPOINT = (id: string) => `posts/${id}`;
 export const CORE_POST_LIKE_ENDPOINT = (id: string) => `posts/${id}/like`;
 export const CORE_POST_COMMENT_ENDPOINT = (id: string) => `posts/${id}/comment`;
 
+// Upload
+export const CORE_UPLOAD_IMAGE_ENDPOINT = "uploads/image";
+
 // User
 export const CORE_USER_PROFILE_ENDPOINT = (id: string) => `user/${id}/profile`;
 export const CORE_USER_UPDATE_ENDPOINT = "user/profile/update";

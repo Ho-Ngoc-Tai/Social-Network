@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, useCallback } from "react";
 
@@ -163,6 +164,34 @@ export function PostCard({ post }: { post: Post }) {
             }}
             dangerouslySetInnerHTML={{ __html: post.content }}
           />
+
+          {/* Display images if any */}
+          {(post.image || (post.files && post.files.length > 0)) && (
+            <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              {post.image && (
+                <Box sx={{ position: 'relative', width: '100%', height: 400, borderRadius: 2, overflow: 'hidden' }}>
+                  <Image
+                    src={post.image}
+                    alt="Post image"
+                    fill
+                    style={{ objectFit: 'cover' }}
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                  />
+                </Box>
+              )}
+              {post.files?.map((fileUrl, idx) => (
+                <Box key={idx} sx={{ position: 'relative', width: '100%', height: 400, borderRadius: 2, overflow: 'hidden' }}>
+                  <Image
+                    src={fileUrl}
+                    alt={`Post image ${idx + 1}`}
+                    fill
+                    style={{ objectFit: 'cover' }}
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                  />
+                </Box>
+              ))}
+            </Box>
+          )}
 
           <Box sx={{ mt: 2.5, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1.5 }}>
             <Chip

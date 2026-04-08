@@ -6,7 +6,9 @@ export interface ProfileState {
   posts: UserPost[];
   friendStatus: UserFriendStatus | null;
   isLoading: boolean;
+  updateLoading: boolean;
   error: string | null;
+  updateError: string | null;
 }
 
 const initialState: ProfileState = {
@@ -14,14 +16,16 @@ const initialState: ProfileState = {
   posts: [],
   friendStatus: null,
   isLoading: false,
+  updateLoading: false,
   error: null, 
+  updateError: null,
 };
 
 const profileSlice = createSlice({
   name: "profile",
   initialState,
   reducers: {
-    loadProfileRequested: (state, action: PayloadAction<{ userId: string; page?: number; limit?: number }>) => {
+    loadProfileRequested: (state, _action: PayloadAction<{ userId: string; page?: number; limit?: number }>) => {
       state.isLoading = true;
       state.error = null;
     },
@@ -38,6 +42,19 @@ const profileSlice = createSlice({
     loadProfileFailed: (state, action: PayloadAction<{ error: string }>) => {
       state.isLoading = false;
       state.error = action.payload.error;
+    },
+    updateProfileRequested: (state, _action: PayloadAction<{ userId: string; data: Partial<UserProfileData> }>) => {
+      state.updateLoading = true;
+      state.updateError = null;
+    },
+    updateProfileSucceeded: (state, action: PayloadAction<{ user: UserProfileData }>) => {
+      state.user = action.payload.user;
+      state.updateLoading = false;
+      state.updateError = null;
+    },
+    updateProfileFailed: (state, action: PayloadAction<{ error: string }>) => {
+      state.updateLoading = false;
+      state.updateError = action.payload.error;
     },
   },
 });

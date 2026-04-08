@@ -1,7 +1,8 @@
 import { put, takeLatest, call, select } from "redux-saga/effects";
 import { PayloadAction } from "@reduxjs/toolkit";
 import { feedActions } from "../../reducers/feed/feedSlice";
-import { NEXT_FEED_LIST_ENDPOINT, NEXT_FEED_CREATE_ENDPOINT, NEXT_POST_LIKE_ENDPOINT, NEXT_POST_COMMENT_ENDPOINT } from "../../../routes/next.api";
+import { NEXT_FEED_LIST_ENDPOINT, NEXT_FEED_CREATE_ENDPOINT, NEXT_POST_LIKE_ENDPOINT, NEXT_POST_COMMENT_ENDPOINT, NEXT_UPLOAD_IMAGE_ENDPOINT } from "../../../routes/next.api";
+import { UploadImageResponse } from "../../../types/upload/upload";
 import { Post } from "../../../types/post/post";
 
 // API Response Types
@@ -95,18 +96,21 @@ async function loadFeedApi(params: { page?: number; limit?: number; authorId?: s
 }
 }
 
-async function createPostApi(content: string): Promise<CreatePostResponse> {
-  // Get token from localStorage
+async function createPostApi(content: string, image?: string, files?: string[]): Promise<CreatePostResponse> {
   const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
   
   try {
+    const body: { content: string; status: string; image?: string; files?: string[] } = { content, status: 'published' };
+    if (image) body.image = image;
+    if (files && files.length > 0) body.files = files;
+
     const response = await fetch(NEXT_FEED_CREATE_ENDPOINT, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         ...(token && { 'Authorization': `Bearer ${token}` }),
       },
-      body: JSON.stringify({ content, status: 'published' }),
+      body: JSON.stringify(body),
     });
     
     if (!response.ok) {
@@ -192,9 +196,14 @@ function* loadFeedWorker(action: PayloadAction<{ page?: number; limit?: number; 
   }
 }
 
-function* createPostWorker(action: PayloadAction<{ content: string }>) {
+function* createPostWorker(action: PayloadAction<{ content: string; image?: string; files?: string[] }>) {
   try {
-    const response: CreatePostResponse = yield call(createPostApi, action.payload.content);
+    const response: CreatePostResponse = yield call(
+      createPostApi, 
+      action.payload.content,
+      action.payload.image,
+      action.payload.files
+    );
     
     yield put(feedActions.createPostSucceeded({
       post: response.data,
@@ -264,6 +273,48 @@ async function commentPostApi(postId: string, content: string): Promise<CommentP
   }
 }
 
+// Upload image API
+async function uploadImageApi(file: File): Promise<UploadImageResponse> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  
+  if (!token) {
+    throw new Error('Authentication required');
+  }
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(NEXT_UPLOAD_IMAGE_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      // Don't set Content-Type - browser will set it with boundary for multipart
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || `Failed to upload image: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+function* uploadImageWorker(action: PayloadAction<{ file: File }>) {
+  try {
+    const response: UploadImageResponse = yield call(uploadImageApi, action.payload.file);
+    yield put(feedActions.uploadImageSucceeded({
+      url: response.data.url,
+      filename: response.data.filename,
+    }));
+  } catch (error) {
+    yield put(feedActions.uploadImageFailed({
+      error: error instanceof Error ? error.message : 'Failed to upload image',
+    }));
+  }
+}
+
 function* commentPostWorker(action: PayloadAction<{ postId: string; content: string }>) {
   try {
     const response: CommentPostResponse = yield call(commentPostApi, action.payload.postId, action.payload.content);
@@ -286,4 +337,5 @@ export function* feedSaga() {
   yield takeLatest(feedActions.createPostRequested.type, createPostWorker);
   yield takeLatest(feedActions.likePostRequested.type, likePostWorker);
   yield takeLatest(feedActions.commentPostRequested.type, commentPostWorker);
+  yield takeLatest(feedActions.uploadImageRequested.type, uploadImageWorker);
 }

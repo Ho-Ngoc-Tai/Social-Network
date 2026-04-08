@@ -7,10 +7,14 @@ export interface FeedState {
   error: string | null;
   createLoading: boolean;
   createError: string | null;
+  createSuccess: boolean;
   likeLoading: Record<string, boolean>;
   likeError: string | null;
   commentLoading: Record<string, boolean>;
   commentError: string | null;
+  uploadImageLoading: boolean;
+  uploadImageError: string | null;
+  uploadedImageUrl: string | null;
   hasMore: boolean;
   currentPage: number;
 }
@@ -21,10 +25,14 @@ const initialState: FeedState = {
   error: null,
   createLoading: false,
   createError: null,
+  createSuccess: false,
   likeLoading: {},
   likeError: null,
   commentLoading: {},
   commentError: null,
+  uploadImageLoading: false,
+  uploadImageError: null,
+  uploadedImageUrl: null,
   hasMore: true,
   currentPage: 1,
 };
@@ -56,17 +64,25 @@ const feedSlice = createSlice({
       state.error = action.payload.error;
       state.isLoading = false;
     },
-    createPostRequested: (state, action: PayloadAction<{ content: string }>) => {
+    createPostRequested: (state, _action: PayloadAction<{ content: string; image?: string; files?: string[] }>) => {
       state.createLoading = true;
       state.createError = null;
+      state.createSuccess = false;
     },
     createPostSucceeded: (state, action: PayloadAction<{ post: Post }>) => {
       state.items = [action.payload.post, ...state.items];
       state.createLoading = false;
+      state.createSuccess = true;
     },
     createPostFailed: (state, action: PayloadAction<{ error: string }>) => {
       state.createError = action.payload.error;
       state.createLoading = false;
+      state.createSuccess = false;
+    },
+    resetCreateState: (state) => {
+      state.createSuccess = false;
+      state.createError = null;
+      state.uploadedImageUrl = null;
     },
     likePostRequested: (state, action: PayloadAction<{ postId: string }>) => {
       state.likeLoading[action.payload.postId] = true;
@@ -97,6 +113,19 @@ const feedSlice = createSlice({
     commentPostFailed: (state, action: PayloadAction<{ postId: string; error: string }>) => {
       state.commentLoading[action.payload.postId] = false;
       state.commentError = action.payload.error;
+    },
+    uploadImageRequested: (state, _action: PayloadAction<{ file: File }>) => {
+      state.uploadImageLoading = true;
+      state.uploadImageError = null;
+    },
+    uploadImageSucceeded: (state, action: PayloadAction<{ url: string; filename: string }>) => {
+      state.uploadedImageUrl = action.payload.url;
+      state.uploadImageLoading = false;
+      state.uploadImageError = null;
+    },
+    uploadImageFailed: (state, action: PayloadAction<{ error: string }>) => {
+      state.uploadImageLoading = false;
+      state.uploadImageError = action.payload.error;
     },
   },
 });
