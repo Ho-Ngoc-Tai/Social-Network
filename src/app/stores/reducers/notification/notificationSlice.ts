@@ -67,8 +67,8 @@ export const notificationSlice = createSlice({
     fetchUnreadCountSucceeded: (state, action: PayloadAction<{ unread_count: number }>) => {
       state.unreadCount = action.payload.unread_count;
     },
-    fetchUnreadCountFailed: () => {
-      // Silently fail for unread count
+    fetchUnreadCountFailed: (_state, _action: PayloadAction<{ error: string }>) => {
+      // Silently fail for unread count - state unchanged
     },
     // Real-time notification received via socket
     receiveRealtimeNotification: (state, action: PayloadAction<{ notification: Notification }>) => {
