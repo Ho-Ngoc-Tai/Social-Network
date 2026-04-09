@@ -23,7 +23,7 @@ export const notificationSlice = createSlice({
   name: "notification",
   initialState,
   reducers: {
-    loadNotificationsRequested: (state) => {
+    loadNotificationsRequested: (state, _action: PayloadAction<{ limit?: number; cursor?: string | null }>) => {
       state.isLoading = true;
       state.error = null;
     },
