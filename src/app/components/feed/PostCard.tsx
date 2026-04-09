@@ -29,7 +29,7 @@ function formatTime(iso: string) {
   return d.toLocaleString(undefined, { month: "short", day: "numeric" });
 }
 
-export function PostCard({ post }: { post: Post }) {
+export function PostCard({ post, variant = 'feed' }: { post: Post; variant?: 'feed' | 'profile' }) {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const likeLoading = useAppSelector((s) => s.feed.likeLoading[post.id] || false);
@@ -85,10 +85,13 @@ export function PostCard({ post }: { post: Post }) {
     setShowCommentInput(false);
   }, [dispatch, post.id, commentContent]);
 
+  const isProfile = variant === 'profile';
+
   return (
     <Card
       onClick={handleCardClick}
       sx={{
+        ...(isProfile && { width: '50%', mx: 'auto' }),
         borderRadius: 3,
         backgroundColor: "rgba(255,255,255,0.72)",
         border: "none",
@@ -167,9 +170,9 @@ export function PostCard({ post }: { post: Post }) {
 
           {/* Display images if any */}
           {(post.image || (post.files && post.files.length > 0)) && (
-            <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            <Box sx={{ mt: 2, mx: 3, display: 'flex', flexWrap: 'wrap', gap: 2, justifyContent: 'center' }}>
               {post.image && (
-                <Box sx={{ position: 'relative', width: '100%', height: 400, borderRadius: 2, overflow: 'hidden' }}>
+                <Box sx={{ position: 'relative', width: '100%', maxWidth: 520, height: 260, borderRadius: 2, overflow: 'hidden' }}>
                   <Image
                     src={post.image}
                     alt="Post image"
@@ -180,7 +183,7 @@ export function PostCard({ post }: { post: Post }) {
                 </Box>
               )}
               {post.files?.map((fileUrl, idx) => (
-                <Box key={idx} sx={{ position: 'relative', width: '100%', height: 400, borderRadius: 2, overflow: 'hidden' }}>
+                <Box key={idx} sx={{ position: 'relative', width: '70%', maxWidth: 560, height: 260, borderRadius: 2, overflow: 'hidden' }}>
                   <Image
                     src={fileUrl}
                     alt={`Post image ${idx + 1}`}

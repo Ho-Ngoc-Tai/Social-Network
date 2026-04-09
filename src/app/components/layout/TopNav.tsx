@@ -33,7 +33,7 @@ export function TopNav() {
   return (
     <AppBar position="sticky" sx={{ backdropFilter: "blur(16px)", backgroundColor: "rgba(242, 243, 255, 0.85)" }}>
       <Toolbar disableGutters>
-        <Container maxWidth="xl" sx={{ display: "flex", alignItems: "center", gap: 3, py: 1.5 }}>
+        <Container maxWidth="xl" sx={{ display: "flex", alignItems: "center", gap: 3, pt: 1.5, pb: 1.5 }}>
           <Box sx={{ flex: "0 0 auto" }}>
             <Link href={routes.feed} style={{ display: "inline-flex" }}>
               <BrandMark condensed />
@@ -56,57 +56,60 @@ export function TopNav() {
                 "& .MuiFilledInput-root": {
                   borderRadius: 999,
                   backgroundColor: "rgba(255,255,255,0.72)",
+                  pb: 1,
                 },
               }}
             />
           </Box>
 
           <Box sx={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: 2 }}>
-            {status === "authenticated" ? (
-              <>
-                <NotificationBell />
-                <IconButton
-                  component={Link}
-                  href={routes.friends}
-                  sx={{ p: 0.5 }}
-                  aria-label="Friends"
-                >
-                  <PeopleAltRoundedIcon />
-                </IconButton>
-                <IconButton
-                  component={Link}
-                  href={routes.chat}
-                  sx={{ p: 0.5 }}
-                  aria-label="Chat"
-                >
-                  <ChatRoundedIcon />
-                </IconButton>
-                <IconButton 
-                  component={Link} 
-                  href={userId ? routes.profile(encodeURIComponent(userId)) : '#'} 
-                  sx={{ p: 0.5 }}
-                >
-                  <Avatar
-                    alt={email ?? "User"}
-                    src="https://i.pravatar.cc/120?img=32"
-                    sx={{ width: 36, height: 36 }}
-                  />
-                </IconButton>
-                <Button
-                  variant="text"
-                  color="inherit"
-                  onClick={() => dispatch(authActions.logoutRequested())}
-                  sx={{ textTransform: "none", fontWeight: 600 }}
-                >
-                  Logout
-                </Button>
-              </>
-            ) : (
+            {status === "unauthenticated" && (
               <Button component={Link} href={routes.login} variant="contained" sx={{ py: 1, px: 2.5, fontWeight: 650 }}>
                 Sign in
               </Button>
             )}
           </Box>
+
+          {status === "authenticated" && (
+            <Box sx={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)", display: "flex", alignItems: "center", gap: 2 }}>
+              <NotificationBell />
+              <IconButton
+                component={Link}
+                href={routes.friends}
+                sx={{ p: 0.5 }}
+                aria-label="Friends"
+              >
+                <PeopleAltRoundedIcon />
+              </IconButton>
+              <IconButton
+                component={Link}
+                href={routes.chat}
+                sx={{ p: 0.5 }}
+                aria-label="Chat"
+              >
+                <ChatRoundedIcon />
+              </IconButton>
+              <IconButton 
+                component={Link} 
+                href={userId ? routes.profile(encodeURIComponent(userId)) : '#'} 
+                sx={{ p: 0.5 }}
+              >
+                <Avatar
+                  alt={email ?? "User"}
+                  src="https://i.pravatar.cc/120?img=32"
+                  sx={{ width: 36, height: 36 }}
+                />
+              </IconButton>
+              <Button
+                variant="text"
+                color="inherit"
+                onClick={() => dispatch(authActions.logoutRequested())}
+                sx={{ textTransform: "none", fontWeight: 600 }}
+              >
+                Logout
+              </Button>
+            </Box>
+          )}
         </Container>
       </Toolbar>
     </AppBar>

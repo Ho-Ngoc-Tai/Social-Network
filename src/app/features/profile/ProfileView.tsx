@@ -150,7 +150,7 @@ export function ProfileView({ id }: { id: string }) {
         ) : (
           <Stack gap={3}>
             {posts.map((p) => (
-              <PostCard key={p.id} post={p} />
+              <PostCard key={p.id} post={p} variant="profile" />
             ))}
           </Stack>
         )}
