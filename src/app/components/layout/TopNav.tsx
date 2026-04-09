@@ -63,7 +63,7 @@ export function TopNav() {
           </Box>
 
           <Box sx={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: 2 }}>
-            {status === "unauthenticated" && (
+            {status === "anonymous" && (
               <Button component={Link} href={routes.login} variant="contained" sx={{ py: 1, px: 2.5, fontWeight: 650 }}>
                 Sign in
               </Button>
