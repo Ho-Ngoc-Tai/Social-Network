@@ -93,6 +93,19 @@ export async function GET(
 
     const resp = await getUserProfile(userId, queryString, token);
 
+    // Transform posts to populate author object
+    if (resp?.data?.posts && resp?.data?.user) {
+      const user = resp.data.user;
+      resp.data.posts = resp.data.posts.map((post: { author: string | object }) => ({
+        ...post,
+        author: typeof post.author === 'string' ? {
+          id: user.id,
+          full_name: user.full_name,
+          avatar: user.avatar || null,
+        } : post.author,
+      }));
+    }
+
     return Response.json(resp);
 
   } catch (error) {

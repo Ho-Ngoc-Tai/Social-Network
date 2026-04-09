@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
@@ -9,6 +9,7 @@ import Chip from "@mui/material/Chip";
 import Divider from "@mui/material/Divider";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
+import CircularProgress from "@mui/material/CircularProgress";
 
 import LocalFireDepartmentRoundedIcon from "@mui/icons-material/LocalFireDepartmentRounded";
 
@@ -111,15 +112,47 @@ function RightRail() {
 export function FeedView() {
   const dispatch = useAppDispatch();
   const items = useAppSelector((s) => s.feed.items);
+  const currentPage = useAppSelector((s) => s.feed.currentPage);
+  const hasMore = useAppSelector((s) => s.feed.hasMore);
+  const isLoading = useAppSelector((s) => s.feed.isLoading);
   const hasMounted = useRef(false);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const lastItemRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    // Only load once on mount
     if (!hasMounted.current) {
       hasMounted.current = true;
       dispatch(feedActions.loadFeedRequested({ page: 1, limit: 10 }));
     }
   }, [dispatch]);
+
+  // Infinite scroll observer
+  const loadMore = useCallback(() => {
+    if (!isLoading && hasMore) {
+      dispatch(feedActions.loadFeedRequested({ page: currentPage + 1, limit: 10 }));
+    }
+  }, [dispatch, isLoading, hasMore, currentPage]);
+
+  useEffect(() => {
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+    }
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !isLoading) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1, rootMargin: "100px" }
+    );
+
+    if (lastItemRef.current) {
+      observerRef.current.observe(lastItemRef.current);
+    }
+
+    return () => observerRef.current?.disconnect();
+  }, [loadMore, hasMore, isLoading, items.length]);
 
   return (
     <AuthGate>
@@ -130,9 +163,19 @@ export function FeedView() {
             <Stack gap={3}>
               <ComposerCard />
               <Stack gap={3}>
-                {items.map((p) => (
-                  <PostCard key={p.id} post={p} />
+                {items.map((p, index) => (
+                  <div
+                    key={p.id}
+                    ref={index === items.length - 1 ? lastItemRef : null}
+                  >
+                    <PostCard post={p} />
+                  </div>
                 ))}
+                {isLoading && (
+                  <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+                    <CircularProgress size={24} />
+                  </Box>
+                )}
               </Stack>
             </Stack>
           }

@@ -112,8 +112,6 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    console.error('Unread Count Unexpected Error:', error);
-
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
 
     return Response.json(

@@ -48,7 +48,7 @@ async function loadFeedApi(params: { page?: number; limit?: number; authorId?: s
   const searchParams = new URLSearchParams();
   if (params.page) searchParams.append('page', params.page.toString());
   if (params.limit) searchParams.append('limit', params.limit.toString());
-  if (params.authorId) searchParams.append('authorId', params.authorId);
+  if (params.authorId) searchParams.append('author', params.authorId);
   
   const url = `${NEXT_FEED_LIST_ENDPOINT}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
   

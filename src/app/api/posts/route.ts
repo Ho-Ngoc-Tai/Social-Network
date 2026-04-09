@@ -40,14 +40,7 @@ const get = async (endpoint: string, params: string, token?: string) => {
   try {
     const baseUrl = process.env.API_BASE_URL || 'https://social-backend.bijancob.io.vn';
     const fullUrl = `${baseUrl}/${endpoint}${params ? `?${params}` : ''}`;
-    
-    console.log('Backend API Call:', {
-      endpoint,
-      params,
-      fullUrl,
-      token: token ? `${token.substring(0, 20)}...` : 'null'
-    });
-    
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
@@ -60,23 +53,15 @@ const get = async (endpoint: string, params: string, token?: string) => {
       method: 'GET',
       headers,
     });
-    
-    console.log('Backend API Response:', {
-      status: response.status,
-      statusText: response.statusText,
-      url: response.url
-    });
-    
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error('Backend API Error:', errorData);
       const message = extractBackendMessage(errorData, `HTTP error! status: ${response.status}`);
       throw new HttpError(message, response.status, errorData);
     }
     
     return await response.json();
   } catch (error) {
-    console.error('Get Function Error:', error);
     throw error;
   }
 };
@@ -139,12 +124,6 @@ export async function GET(req: NextRequest) {
     const authHeader = req.headers.get('authorization');
     const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined;
 
-    console.log('API Route Debug:', {
-      authHeader,
-      token: token ? `${token.substring(0, 20)}...` : 'null',
-      searchParams: Object.fromEntries(searchParams)
-    });
-
     // Forward query params to backend
     searchParams.forEach((value, key) => {
       params.append(key, value);
@@ -156,11 +135,6 @@ export async function GET(req: NextRequest) {
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
-    
-    console.error('API Route Error:', {
-      error: errorMessage,
-      stack: error instanceof Error ? error.stack : 'No stack'
-    });
 
     return Response.json(
       {
@@ -224,8 +198,6 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    console.log('Create Post Payload:', payload);
-
     const resp = await post(CORE_FEED_LIST_ENDPOINT, payload, token);
 
     return Response.json(resp);
@@ -246,8 +218,6 @@ export async function POST(req: NextRequest) {
         { status: error.status },
       );
     }
-
-    console.error('Create Post Unexpected Error:', error);
 
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
 

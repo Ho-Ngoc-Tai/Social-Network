@@ -40,23 +40,6 @@ class SocketService {
       reconnectionDelay: 1000,
     });
 
-    this.socket.on("connect", () => {
-      console.log("[Socket] Connected:", this.socket?.id);
-    });
-
-    this.socket.on("disconnect", (reason: string) => {
-      console.log("[Socket] Disconnected:", reason);
-    });
-
-    this.socket.on("connect_error", (error: Error) => {
-      console.error("[Socket] Connection error:", error.message);
-    });
-
-    // Listen for new_notification event
-    this.socket.on("new_notification", (data: SocketNotification) => {
-      console.log("[Socket] New notification:", data);
-      this.emit("new_notification", data);
-    });
   }
 
   disconnect(): void {

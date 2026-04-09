@@ -39,12 +39,6 @@ const postComment = async (endpoint: string, content: string, token?: string) =>
   const baseUrl = process.env.API_BASE_URL || 'https://social-backend.bijancob.io.vn';
   const fullUrl = `${baseUrl}/${endpoint}`;
 
-  console.log('Comment Backend API Call:', {
-    endpoint,
-    fullUrl,
-    content,
-    token: token ? `${token.substring(0, 20)}...` : 'null'
-  });
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -111,12 +105,6 @@ export async function POST(
         { status: 400 },
       );
     }
-
-    console.log('Comment API Debug:', {
-      postId,
-      content,
-      authHeader: authHeader ? `${authHeader.substring(0, 20)}...` : 'null'
-    });
 
     const resp = await postComment(`posts/${postId}/comments`, content, token);
 
