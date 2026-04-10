@@ -26,6 +26,7 @@ export const NEXT_USER_PROFILE_ENDPOINT = (id: string) => `/api/users/${id}/prof
 export const NEXT_USER_UPDATE_ENDPOINT = "/api/user/profile/update";
 export const NEXT_USER_PATCH_ENDPOINT = (id: string) => `/api/users/${id}`;
 export const NEXT_USER_FRIEND_ENDPOINT = (userId: string) => `/api/users/${encodeURIComponent(userId)}/friend`;
+export const NEXT_USER_ACCEPT_FRIEND_ENDPOINT = (userId: string) => `/api/users/${encodeURIComponent(userId)}/friend/accept`;
 export const NEXT_USER_UNFRIEND_ENDPOINT = (userId: string) => `/api/users/${encodeURIComponent(userId)}/unfriend`;
 
 // Friends

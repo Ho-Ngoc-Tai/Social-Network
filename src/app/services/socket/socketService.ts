@@ -32,14 +32,39 @@ class SocketService {
 
     this.socket = io(env.socketUrl, {
       transports: ["websocket", "polling"],
-      auth: {
-        token,
-      },
+      auth: { token },
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
     });
 
+    // Debug connection events - register listeners when actually connected
+    this.socket.on('connect', () => {
+      console.log('[Socket] Connected successfully, socket id:', this.socket?.id);
+      // Register all stored listeners with socket.io when connected
+      this.listeners.forEach((callbacks, event) => {
+        callbacks.forEach((callback) => {
+          this.socket?.on(event, callback);
+          console.log(`[Socket] Registered listener for: ${event}`);
+        });
+      });
+      console.log('[Socket] All listeners registered from Map');
+    });
+    
+    // Catch ALL events for debugging
+    this.socket.onAny((eventName, ...args) => {
+      console.log('[Socket] Received event:', eventName, args);
+    });
+    
+    this.socket.on('connect_error', (err) => {
+      console.log('[Socket] Connection error:', err.message);
+    });
+    
+    this.socket.on('disconnect', (reason) => {
+      console.log('[Socket] Disconnected:', reason);
+    });
+
+    console.log('[Socket] Connection initiated, listeners in Map:', Array.from(this.listeners.keys()));
   }
 
   disconnect(): void {
@@ -60,9 +85,16 @@ class SocketService {
     }
     this.listeners.get(event)!.add(callback);
 
+    // Actually register with socket.io if connected
+    if (this.socket?.connected) {
+      this.socket.on(event, callback);
+      console.log(`[Socket] Registered listener for: ${event}`);
+    }
+
     // Return unsubscribe function
     return () => {
       this.listeners.get(event)?.delete(callback);
+      this.socket?.off(event, callback);
     };
   }
 

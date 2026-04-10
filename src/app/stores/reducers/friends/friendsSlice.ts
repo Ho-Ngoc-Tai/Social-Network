@@ -45,7 +45,7 @@ const friendsSlice = createSlice({
       state.error = action.payload.error;
     },
     // Send friend request
-    sendFriendRequestRequested: (state) => {
+    sendFriendRequestRequested: (state, _action: PayloadAction<{ userId: string }>) => {
       state.isSendingRequest = true;
       state.error = null;
     },

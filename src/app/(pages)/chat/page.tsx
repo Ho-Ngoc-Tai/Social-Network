@@ -1,18 +1,33 @@
 "use client";
 
-import { Container, Typography, Box } from "@mui/material";
+import { Container, Typography, Box, IconButton } from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import { useRouter } from "next/navigation";
 import { ChatView } from "../../features/chat/ChatView";
 import { ChatWindow } from "../../features/chat/ChatWindow";
 import { useAppSelector } from "../../hooks/storeHooks";
 
 export default function ChatPage() {
   const selectedConversationId = useAppSelector((s) => s.chat.selectedConversationId);
+  const router = useRouter();
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Typography variant="h4" sx={{ fontWeight: 800, mb: 3 }}>
-        Messages
-      </Typography>
+      {/* Back Button */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+        <IconButton 
+          onClick={() => router.back()}
+          sx={{ 
+            color: '#1A1F3C',
+            '&:hover': { backgroundColor: 'rgba(99, 102, 241, 0.08)' }
+          }}
+        >
+          <ArrowBackIcon />
+        </IconButton>
+        <Typography variant="h4" sx={{ fontWeight: 800 }}>
+          Messages
+        </Typography>
+      </Box>
       <Box sx={{ display: "grid", gridTemplateColumns: { md: "350px 1fr" }, gap: 3, height: 600 }}>
         <Box>
           <ChatView />

@@ -1,9 +1,11 @@
 import { put, takeLatest, call } from "redux-saga/effects";
 import { PayloadAction } from "@reduxjs/toolkit";
 import { friendsActions } from "../../reducers/friends/friendsSlice";
+import { profileActions } from "../../reducers/profile/profileSlice";
 import { 
   NEXT_FRIENDS_LIST_ENDPOINT, 
   NEXT_USER_FRIEND_ENDPOINT, 
+  NEXT_USER_ACCEPT_FRIEND_ENDPOINT,
   NEXT_PENDING_REQUESTS_ENDPOINT,
   NEXT_USER_UNFRIEND_ENDPOINT,
   NEXT_BLOCKED_LIST_ENDPOINT,
@@ -52,6 +54,7 @@ async function sendFriendRequestApi(userId: string): Promise<{ data: Friend; mes
       'Content-Type': 'application/json',
       ...(token && { 'Authorization': `Bearer ${token}` }),
     },
+    body: JSON.stringify({}),
   });
 
   if (!response.ok) {
@@ -62,10 +65,36 @@ async function sendFriendRequestApi(userId: string): Promise<{ data: Friend; mes
   return response.json();
 }
 
+// Accept friend request API
+async function acceptFriendRequestApi(userId: string): Promise<{ data: Friend; message: string }> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  
+  // Try without /accept - backend might use same endpoint with different logic
+  const response = await fetch(NEXT_USER_FRIEND_ENDPOINT(userId), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }),
+    },
+    body: JSON.stringify({}),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || `Failed to accept friend request: ${response.status}`);
+  }
+
+  return response.json();
+}
+
 function* sendFriendRequestWorker(action: PayloadAction<{ userId: string }>) {
   try {
     yield call(sendFriendRequestApi, action.payload.userId);
     yield put(friendsActions.sendFriendRequestSucceeded());
+    // Reload pending requests after sending friend request
+    yield put(friendsActions.loadPendingRequestsRequested());
+    // Reload friend status for the target user (if viewing their profile)
+    yield put(profileActions.reloadFriendStatusRequested({ userId: action.payload.userId }));
   } catch (error) {
     yield put(friendsActions.sendFriendRequestFailed({
       error: error instanceof Error ? error.message : 'Failed to send friend request',
@@ -125,8 +154,8 @@ async function unfriendApi(userId: string): Promise<{ data: { success: boolean }
 
 function* acceptFriendRequestWorker(action: PayloadAction<{ userId: string }>) {
   try {
-    // Accept uses the same API as send friend request
-    yield call(sendFriendRequestApi, action.payload.userId);
+    // Use dedicated accept API endpoint
+    yield call(acceptFriendRequestApi, action.payload.userId);
     yield put(friendsActions.acceptFriendRequestSucceeded());
     // Reload both lists after accepting
     yield put(friendsActions.loadFriendsRequested());

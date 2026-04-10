@@ -10,6 +10,7 @@ export interface User {
   username: string;
   email: string;
   full_name: string | null;
+  avatar: string | null;
   status: 'ACTIVE' | 'INACTIVE' | string;
   created_at: string;
   profile: {

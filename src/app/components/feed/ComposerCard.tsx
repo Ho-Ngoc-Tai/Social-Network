@@ -30,7 +30,7 @@ export function ComposerCard() {
   const [content, setContent] = useState("");
   const [htmlContent, setHtmlContent] = useState("");
   const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
-  const remaining = useMemo(() => 280 - content.length, [content.length]);
+  const remaining = useMemo(() => 2500 - content.length, [content.length]);
 
   // Reset form when post succeeds
   useEffect(() => {

@@ -4,6 +4,7 @@ import { useEffect, useCallback } from "react";
 import { useAppSelector, useAppDispatch } from "./storeHooks";
 import { socketService, SocketNotification } from "../services/socket/socketService";
 import { notificationActions } from "../stores/reducers/notification/notificationSlice";
+import { friendsActions } from "../stores/reducers/friends/friendsSlice";
 
 export function useSocket() {
   const dispatch = useAppDispatch();
@@ -29,6 +30,13 @@ export function useSocket() {
         notificationActions.receiveRealtimeNotification({ notification })
       );
 
+      // Reload friends/pending requests when receiving friend-related events
+      if (data.action === "FRIEND_REQ" || data.action === "FRIEND_ACCEPT") {
+        console.log("[Socket] Reloading friends/pending requests...");
+        dispatch(friendsActions.loadFriendsRequested());
+        dispatch(friendsActions.loadPendingRequestsRequested());
+      }
+
       // Show browser notification if permitted
       if (typeof window !== "undefined" && "Notification" in window) {
         if (Notification.permission === "granted") {
@@ -43,15 +51,21 @@ export function useSocket() {
   );
 
   useEffect(() => {
+    console.log('[useSocket] Effect running:', { isAuthenticated, hasToken: !!token });
+    
     if (!isAuthenticated || !token) {
+      console.log('[useSocket] Not authenticated, skipping');
       return;
     }
 
     // Connect socket
+    console.log('[useSocket] Connecting socket...');
     socketService.connect(token);
+    console.log('[useSocket] Socket connected?', socketService.isConnected());
 
     // Subscribe to new_notification event
     const unsubscribe = socketService.on("new_notification", (data) => {
+      console.log('[Socket] Received new_notification:', data);
       handleNewNotification(data as SocketNotification);
     });
 

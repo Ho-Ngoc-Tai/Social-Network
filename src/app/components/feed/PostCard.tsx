@@ -14,10 +14,19 @@ import Chip from "@mui/material/Chip";
 import IconButton from "@mui/material/IconButton";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
+import ListItemIcon from "@mui/material/ListItemIcon";
+import ListItemText from "@mui/material/ListItemText";
 
 import FavoriteBorderRoundedIcon from "@mui/icons-material/FavoriteBorderRounded";
 import FavoriteRoundedIcon from "@mui/icons-material/FavoriteRounded";
-import ModeCommentOutlinedIcon from "@mui/icons-material/ModeCommentOutlined";
+import ChatBubbleOutlineRoundedIcon from "@mui/icons-material/ChatBubbleOutlineRounded";
+import ShareOutlinedIcon from "@mui/icons-material/ShareOutlined";
+import BookmarkBorderOutlinedIcon from "@mui/icons-material/BookmarkBorderOutlined";
+import MoreHorizOutlinedIcon from "@mui/icons-material/MoreHorizOutlined";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 
 import { routes } from "../../constants/routes";
 import { Post } from "../../types/post/post";
@@ -39,6 +48,59 @@ export function PostCard({ post, variant = 'feed' }: { post: Post; variant?: 'fe
   const [commentContent, setCommentContent] = useState('');
   const [comments, setComments] = useState<Array<{ id: string; content: string; author: { id: string; full_name: string; avatar: string | null }; created_at: string }>>([]);
   const commentLoading = useAppSelector((s) => s.feed.commentLoading[post.id] || false);
+
+  // Menu state for post actions
+  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const menuOpen = Boolean(menuAnchorEl);
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+    setMenuAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setMenuAnchorEl(null);
+  };
+
+  const handleEditPost = () => {
+    handleMenuClose();
+    console.log("[PostCard] Edit post clicked:", post.id);
+    // TODO: Navigate to edit post or open edit dialog
+    // router.push(`/posts/${post.id}/edit`);
+  };
+
+  const handleDeletePost = async () => {
+    handleMenuClose();
+    console.log("[PostCard] Delete post clicked:", post.id);
+    
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    if (!token) {
+      console.error("[PostCard] No token found");
+      return;
+    }
+    
+    try {
+      const response = await fetch(`https://social-backend.bijancob.io.vn/posts/${post.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("[PostCard] Delete failed:", errorData);
+        alert(errorData.message || `Failed to delete: ${response.status}`);
+        return;
+      }
+      
+      console.log("[PostCard] Post deleted successfully");
+      // Refresh the feed
+      dispatch(feedActions.loadPostsRequested({ page: 1, limit: 10 }));
+    } catch (error) {
+      console.error("[PostCard] Delete error:", error);
+    }
+  };
 
   const handleCardClick = () => {
     router.push(`/posts/${post.id}`);
@@ -92,14 +154,31 @@ export function PostCard({ post, variant = 'feed' }: { post: Post; variant?: 'fe
       onClick={handleCardClick}
       sx={{
         ...(isProfile && { width: '50%', mx: 'auto' }),
-        borderRadius: 3,
-        backgroundColor: "rgba(255,255,255,0.72)",
+        borderRadius: 4,
+        backgroundColor: "#ffffff",
         border: "none",
-        boxShadow: "none",
-        transition: "background-color 120ms ease",
+        boxShadow: "0 2px 12px rgba(99, 102, 241, 0.08)",
+        transition: "all 200ms ease",
         cursor: "pointer",
+        position: "relative",
+        overflow: "hidden",
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '3px',
+          background: isLiked 
+            ? 'linear-gradient(90deg, #EC4899 0%, #F472B6 100%)' 
+            : 'linear-gradient(90deg, #8B5CF6 0%, #22D3EE 100%)',
+          opacity: isLiked ? 1 : 0.7,
+          transition: 'opacity 200ms ease',
+        },
         "&:hover": {
-          backgroundColor: "rgba(250, 248, 255, 0.85)",
+          backgroundColor: "#f8f9ff",
+          boxShadow: "0 8px 28px rgba(99, 102, 241, 0.15)",
+          transform: "translateY(-2px)",
         },
       }}
     >
@@ -107,27 +186,63 @@ export function PostCard({ post, variant = 'feed' }: { post: Post; variant?: 'fe
         <Avatar 
           src={post.author.avatar || undefined} 
           alt={post.author.full_name} 
-          sx={{ width: 48, height: 48, cursor: 'pointer' }}
+          sx={{ 
+            width: 52, 
+            height: 52, 
+            cursor: 'pointer',
+            border: '2px solid #ffffff',
+            boxShadow: '0 2px 8px rgba(99, 102, 241, 0.2)',
+            transition: 'transform 200ms ease',
+            '&:hover': {
+              transform: 'scale(1.05)',
+            }
+          }}
           component={Link}
           href={routes.profile(encodeURIComponent(post.author.id))}
           onClick={handleAuthorClick}
         />
         <Box sx={{ flex: 1 }}>
-          <Box sx={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 2 }}>
-            <Box sx={{ minWidth: 0 }}>
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
+            <Box sx={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography
                 component={Link}
                 href={routes.profile(encodeURIComponent(post.author.id))}
                 onClick={handleAuthorClick}
                 variant="subtitle1"
-                sx={{ fontWeight: 750, textDecoration: "none" }}
+                sx={{ 
+                  fontWeight: 700, 
+                  textDecoration: "none",
+                  color: '#1A1F3C',
+                  letterSpacing: '-0.01em',
+                }}
               >
                 {post.author.full_name}
               </Typography>
+              <Box
+                sx={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  backgroundColor: '#00c853',
+                  ml: 0.5,
+                }}
+              />
             </Box>
-            <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
-              {formatTime(post.created_at)}
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  whiteSpace: "nowrap",
+                  color: '#4A5568',
+                  fontWeight: 500,
+                }}
+              >
+                {formatTime(post.created_at)}
+              </Typography>
+              <IconButton onClick={handleMenuOpen}>
+                <MoreHorizOutlinedIcon fontSize="small" />
+              </IconButton>
+            </Box>
           </Box>
 
           <Box 
@@ -170,9 +285,17 @@ export function PostCard({ post, variant = 'feed' }: { post: Post; variant?: 'fe
 
           {/* Display images if any */}
           {(post.image || (post.files && post.files.length > 0)) && (
-            <Box sx={{ mt: 2, mx: 3, display: 'flex', flexWrap: 'wrap', gap: 2, justifyContent: 'center' }}>
+            <Box sx={{ mt: 2.5, mx: 0, display: 'flex', flexWrap: 'wrap', gap: 1.5, justifyContent: 'center' }}>
               {post.image && (
-                <Box sx={{ position: 'relative', width: '100%', maxWidth: 520, height: 260, borderRadius: 2, overflow: 'hidden' }}>
+                <Box sx={{ 
+                  position: 'relative', 
+                  width: '100%', 
+                  maxWidth: 560, 
+                  height: 320, 
+                  borderRadius: 3, 
+                  overflow: 'hidden',
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)',
+                }}>
                   <Image
                     src={post.image}
                     alt="Post image"
@@ -180,88 +303,149 @@ export function PostCard({ post, variant = 'feed' }: { post: Post; variant?: 'fe
                     style={{ objectFit: 'cover' }}
                     sizes="(max-width: 768px) 100vw, 50vw"
                   />
+                  <Box sx={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: 'linear-gradient(180deg, transparent 60%, rgba(0,0,0,0.1) 100%)',
+                    pointerEvents: 'none',
+                  }} />
                 </Box>
               )}
               {post.files?.map((fileUrl, idx) => (
-                <Box key={idx} sx={{ position: 'relative', width: '70%', maxWidth: 560, height: 260, borderRadius: 2, overflow: 'hidden' }}>
+                <Box key={idx} sx={{ 
+                  position: 'relative', 
+                  width: isProfile ? '48%' : '48%', 
+                  maxWidth: 280, 
+                  height: 200, 
+                  borderRadius: 2, 
+                  overflow: 'hidden',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+                }}>
                   <Image
                     src={fileUrl}
                     alt={`Post image ${idx + 1}`}
                     fill
                     style={{ objectFit: 'cover' }}
-                    sizes="(max-width: 768px) 100vw, 50vw"
+                    sizes="(max-width: 768px) 100vw, 25vw"
                   />
                 </Box>
               ))}
             </Box>
           )}
 
-          <Box sx={{ mt: 2.5, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1.5 }}>
-            <Chip
-              icon={
-                <IconButton 
-                  size="small" 
-                  onClick={handleLikeClick}
-                  disabled={likeLoading}
-                  sx={{ 
-                    p: 0.5,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    '&:hover': { 
-                      backgroundColor: isLiked ? 'rgba(255,0,0,0.15)' : 'rgba(255,0,0,0.1)',
-                      transform: 'scale(1.1)'
-                    }
+          <Box sx={{ mt: 3, display: "flex", alignItems: "center", justifyContent: 'space-between' }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              {/* Like Button */}
+              <Box
+                onClick={handleLikeClick}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.75,
+                  py: 0.75,
+                  px: 1.5,
+                  borderRadius: 999,
+                  backgroundColor: isLiked ? 'rgba(233, 30, 99, 0.08)' : 'rgba(0, 76, 237, 0.06)',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease',
+                  '&:hover': {
+                    backgroundColor: isLiked ? 'rgba(233, 30, 99, 0.15)' : 'rgba(0, 76, 237, 0.12)',
+                    transform: 'scale(1.02)',
+                  },
+                }}
+              >
+                {isLiked ? (
+                  <FavoriteRoundedIcon 
+                    fontSize="small" 
+                    sx={{ 
+                      color: '#e91e63',
+                      transition: 'all 0.2s ease',
+                      transform: 'scale(1)'
+                    }} 
+                  />
+                ) : (
+                  <FavoriteBorderRoundedIcon 
+                    fontSize="small" 
+                    sx={{ 
+                      color: '#004ced',
+                      transition: 'all 0.2s ease'
+                    }} 
+                  />
+                )}
+                <Typography
+                  sx={{
+                    fontSize: '0.875rem',
+                    fontWeight: isLiked ? 600 : 500,
+                    color: isLiked ? '#e91e63' : '#004ced',
                   }}
                 >
-                  {isLiked ? (
-                    <FavoriteRoundedIcon 
-                      fontSize="small" 
-                      sx={{ 
-                        color: '#e91e63',
-                        transition: 'all 0.2s ease',
-                        transform: 'scale(1)'
-                      }} 
-                    />
-                  ) : (
-                    <FavoriteBorderRoundedIcon 
-                      fontSize="small" 
-                      sx={{ 
-                        color: 'text.secondary',
-                        transition: 'all 0.2s ease'
-                      }} 
-                    />
-                  )}
-                </IconButton>
-              }
-              label={localLikesCount}
-              variant="filled"
-              sx={{ 
-                borderRadius: 999, 
-                backgroundColor: isLiked ? "rgba(255,235,238,1)" : "rgba(226,231,255,1)", 
-                height: 32,
-                transition: 'all 0.2s ease',
-                '& .MuiChip-label': {
-                  color: isLiked ? '#e91e63' : 'inherit',
-                  fontWeight: isLiked ? 600 : 400
-                }
-              }}
-            />
-            <Chip
-              icon={
-                <IconButton 
-                  size="small" 
-                  onClick={handleCommentClick}
-                  disabled={commentLoading}
-                  sx={{ p: 0.5 }}
+                  {localLikesCount}
+                </Typography>
+              </Box>
+
+              {/* Comment Button */}
+              <Box
+                onClick={handleCommentClick}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.75,
+                  py: 0.75,
+                  px: 1.5,
+                  borderRadius: 999,
+                  backgroundColor: showCommentInput ? 'rgba(0, 76, 237, 0.12)' : 'transparent',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease',
+                  '&:hover': {
+                    backgroundColor: 'rgba(0, 76, 237, 0.08)',
+                  },
+                }}
+              >
+                <ChatBubbleOutlineRoundedIcon 
+                  fontSize="small" 
+                  sx={{ color: showCommentInput ? '#004ced' : '#5e5e5e' }}
+                />
+                <Typography
+                  sx={{
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                    color: showCommentInput ? '#004ced' : '#5e5e5e',
+                  }}
                 >
-                  <ModeCommentOutlinedIcon fontSize="small" />
-                </IconButton>
-              }
-              label={post.comments_count}
-              variant="filled"
-              sx={{ borderRadius: 999, backgroundColor: showCommentInput ? "rgba(200,230,255,1)" : "rgba(226,231,255,1)", height: 28, cursor: 'pointer' }}
-              onClick={handleCommentClick}
-            />
+                  {post.comments_count}
+                </Typography>
+              </Box>
+
+              {/* Share Button */}
+              <IconButton
+                size="small"
+                sx={{
+                  p: 0.75,
+                  color: '#4A5568',
+                  '&:hover': {
+                    backgroundColor: 'rgba(0, 76, 237, 0.08)',
+                    color: '#004ced',
+                  },
+                }}
+              >
+                <ShareOutlinedIcon fontSize="small" />
+              </IconButton>
+            </Box>
+
+            {/* Bookmark */}
+            <IconButton
+              size="small"
+              sx={{
+                p: 0.75,
+                color: '#4A5568',
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 76, 237, 0.08)',
+                  color: '#004ced',
+                },
+              }}
+            >
+              <BookmarkBorderOutlinedIcon fontSize="small" />
+            </IconButton>
           </Box>
 
           {/* Comments List */}

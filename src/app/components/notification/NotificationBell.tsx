@@ -22,6 +22,7 @@ import ArticleIcon from "@mui/icons-material/Article";
 import { useAppDispatch, useAppSelector } from "../../hooks/storeHooks";
 import { notificationActions } from "../../stores/reducers/notification/notificationSlice";
 import { Notification } from "../../types/notification/notification";
+import { useRouter } from "next/navigation";
 
 function formatTimeAgo(iso: string): string {
   const date = new Date(iso);
@@ -77,12 +78,50 @@ function getNotificationIcon(type: string) {
 
 export function NotificationBell() {
   const dispatch = useAppDispatch();
+  const router = useRouter();
   const { items, unreadCount, isLoading, hasMore } = useAppSelector(
     (s) => s.notification
   );
   
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const hasFetchedRef = useRef(false);
+
+  // Get navigation URL based on notification type
+  const getNotificationUrl = (notification: Notification): string | null => {
+    switch (notification.type) {
+      case "follow":
+        // Friend request - go to friends page pending tab
+        return "/friends?tab=pending";
+      case "like":
+      case "comment":
+        // Like/comment - go to post detail if target exists
+        if (notification.target?.id) {
+          return `/posts/${notification.target.id}`;
+        }
+        return null;
+      case "post":
+        // New post - go to post detail
+        if (notification.target?.id) {
+          return `/posts/${notification.target.id}`;
+        }
+        return null;
+      default:
+        return null;
+    }
+  };
+
+  // Handle notification click
+  const handleNotificationClick = (notification: Notification) => {
+    const url = getNotificationUrl(notification);
+    if (url) {
+      handleClose();
+      router.push(url);
+    }
+    // Mark as read
+    if (!notification.is_read) {
+      dispatch(notificationActions.markNotificationReadRequested(notification.id));
+    }
+  };
 
   // Fetch unread count on mount
   useEffect(() => {
@@ -192,15 +231,16 @@ export function NotificationBell() {
             items.map((notification: Notification) => (
               <Box
                 key={notification.id}
+                onClick={() => handleNotificationClick(notification)}
                 sx={{
                   p: 2,
                   display: "flex",
                   gap: 2,
                   alignItems: "flex-start",
-                  cursor: "pointer",
+                  cursor: getNotificationUrl(notification) ? "pointer" : "default",
                   backgroundColor: notification.is_read ? "transparent" : "rgba(25,118,210,0.08)",
                   "&:hover": {
-                    backgroundColor: "rgba(0,0,0,0.04)",
+                    backgroundColor: getNotificationUrl(notification) ? "rgba(0,0,0,0.04)" : undefined,
                   },
                   borderBottom: "1px solid",
                   borderColor: "rgba(0,0,0,0.06)",

@@ -220,18 +220,47 @@ export default function PostDetailPage() {
 
           <Divider sx={{ mb: 2 }} />
 
-          {/* Content */}
-          <Typography
-            variant="body1"
+          {/* Content - Render HTML like PostCard */}
+          <Box
             sx={{
-              whiteSpace: "pre-wrap",
               fontSize: "1.1rem",
               lineHeight: 1.6,
               mb: post.image ? 2 : 0,
+              '& h1, & h2, & h3': {
+                margin: '16px 0 8px',
+                fontWeight: 600,
+              },
+              '& ul, & ol': {
+                margin: '8px 0',
+                paddingLeft: 24,
+              },
+              '& li': {
+                margin: '4px 0',
+              },
+              '& img': {
+                maxWidth: '100%',
+                borderRadius: 2,
+                margin: '8px 0',
+              },
+              '& a': {
+                color: 'primary.main',
+                textDecoration: 'none',
+                '&:hover': {
+                  textDecoration: 'underline',
+                },
+              },
+              '& strong': {
+                fontWeight: 700,
+              },
+              '& em': {
+                fontStyle: 'italic',
+              },
+              '& p': {
+                margin: '8px 0',
+              },
             }}
-          >
-            {post.content}
-          </Typography>
+            dangerouslySetInnerHTML={{ __html: post.content }}
+          />
 
           {/* Image */}
           {post.image && (

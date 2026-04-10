@@ -56,6 +56,20 @@ const profileSlice = createSlice({
       state.updateLoading = false;
       state.updateError = action.payload.error;
     },
+    // Reload only friend status
+    reloadFriendStatusRequested: (state, _action: PayloadAction<{ userId: string }>) => {
+      state.isLoading = true;
+      state.error = null;
+    },
+    reloadFriendStatusSucceeded: (state, action: PayloadAction<{ friend: UserFriendStatus }>) => {
+      state.friendStatus = action.payload.friend;
+      state.isLoading = false;
+      state.error = null;
+    },
+    reloadFriendStatusFailed: (state, action: PayloadAction<{ error: string }>) => {
+      state.isLoading = false;
+      state.error = action.payload.error;
+    },
   },
 });
 

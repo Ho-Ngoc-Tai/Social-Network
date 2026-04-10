@@ -106,7 +106,26 @@ function* updateProfileWorker(action: PayloadAction<{ userId: string; data: Part
   }
 }
 
+// Reload only friend status
+function* reloadFriendStatusWorker(action: PayloadAction<{ userId: string }>) {
+  try {
+    const response: UserProfileResponse = yield call(
+      loadUserProfileApi,
+      action.payload.userId,
+      0, // page 0 to get minimal data
+      0, // limit 0 to skip posts
+    );
+
+    yield put(profileActions.reloadFriendStatusSucceeded({ friend: response.data.friend }));
+  } catch (error) {
+    yield put(profileActions.reloadFriendStatusFailed({
+      error: error instanceof Error ? error.message : 'Failed to reload friend status',
+    }));
+  }
+}
+
 export function* profileSaga() {
   yield takeLatest(profileActions.loadProfileRequested.type, loadUserProfileWorker);
   yield takeLatest(profileActions.updateProfileRequested.type, updateProfileWorker);
+  yield takeLatest(profileActions.reloadFriendStatusRequested.type, reloadFriendStatusWorker);
 }
