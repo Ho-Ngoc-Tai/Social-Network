@@ -28,11 +28,13 @@ import { routes } from "../../constants/routes";
 import { Post } from "../../types/post/post";
 import { useAppDispatch, useAppSelector } from "../../hooks/storeHooks";
 import { feedActions } from "../../stores/reducers/feed/feedSlice";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation";
+
 
 function formatTime(iso: string) {
   const d = new Date(iso);
-  return d.toLocaleString(undefined, { month: "short", day: "numeric" });
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return `${months[d.getMonth()]} ${d.getDate()}`;
 }
 
 export function PostCard({ post, variant = 'feed' }: { post: Post; variant?: 'feed' | 'profile' }) {
