@@ -1,8 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { useState, useCallback } from "react";
 
 import Avatar from "@mui/material/Avatar";
@@ -10,14 +8,14 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
-import Chip from "@mui/material/Chip";
 import IconButton from "@mui/material/IconButton";
-import TextField from "@mui/material/TextField";
-import Typography from "@mui/material/Typography";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
+import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
+import Image from "next/image";
 
 import FavoriteBorderRoundedIcon from "@mui/icons-material/FavoriteBorderRounded";
 import FavoriteRoundedIcon from "@mui/icons-material/FavoriteRounded";
@@ -25,13 +23,12 @@ import ChatBubbleOutlineRoundedIcon from "@mui/icons-material/ChatBubbleOutlineR
 import ShareOutlinedIcon from "@mui/icons-material/ShareOutlined";
 import BookmarkBorderOutlinedIcon from "@mui/icons-material/BookmarkBorderOutlined";
 import MoreHorizOutlinedIcon from "@mui/icons-material/MoreHorizOutlined";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
 
 import { routes } from "../../constants/routes";
 import { Post } from "../../types/post/post";
 import { useAppDispatch, useAppSelector } from "../../hooks/storeHooks";
 import { feedActions } from "../../stores/reducers/feed/feedSlice";
+import { useRouter } from "next/router";
 
 function formatTime(iso: string) {
   const d = new Date(iso);
@@ -96,7 +93,7 @@ export function PostCard({ post, variant = 'feed' }: { post: Post; variant?: 'fe
       
       console.log("[PostCard] Post deleted successfully");
       // Refresh the feed
-      dispatch(feedActions.loadPostsRequested({ page: 1, limit: 10 }));
+      dispatch(feedActions.loadFeedRequested({ page: 1, limit: 10 }));
     } catch (error) {
       console.error("[PostCard] Delete error:", error);
     }

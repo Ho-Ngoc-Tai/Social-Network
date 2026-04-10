@@ -8,6 +8,7 @@ export interface User {
   full_name?: string;
   email?: string;
   status?: "ACTIVE" | "BLOCK";
+  avatar?: string;
 }
 
 export interface AuthState {

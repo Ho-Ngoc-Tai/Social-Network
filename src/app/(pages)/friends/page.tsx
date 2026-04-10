@@ -1,11 +1,12 @@
 "use client";
 
-import { Container, Typography, Box, IconButton } from "@mui/material";
+import { Suspense } from "react";
+import { Container, Typography, Box, IconButton, CircularProgress } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useRouter } from "next/navigation";
 import { FriendsView } from "../../features/friends/FriendsView";
 
-export default function FriendsPage() {
+function FriendsContent() {
   const router = useRouter();
   
   return (
@@ -27,5 +28,17 @@ export default function FriendsPage() {
       </Box>
       <FriendsView />
     </Container>
+  );
+}
+
+export default function FriendsPage() {
+  return (
+    <Suspense fallback={
+      <Container maxWidth="md" sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
+        <CircularProgress sx={{ color: '#667eea' }} />
+      </Container>
+    }>
+      <FriendsContent />
+    </Suspense>
   );
 }

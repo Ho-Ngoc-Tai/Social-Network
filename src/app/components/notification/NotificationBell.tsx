@@ -119,7 +119,7 @@ export function NotificationBell() {
     }
     // Mark as read
     if (!notification.is_read) {
-      dispatch(notificationActions.markNotificationReadRequested(notification.id));
+      dispatch(notificationActions.markNotificationReadRequested({ notificationId: notification.id }));
     }
   };
 
