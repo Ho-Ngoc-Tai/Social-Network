@@ -29,7 +29,7 @@ interface CommentTreeProps {
 async function mergeWithParentCache(postId: string, comments: Comment[]): Promise<Comment[]> {
   if (typeof window === 'undefined') return comments;
   try {
-    const { getCommentParents } = await import('../../../hooks/useCommentCache');
+    const { getCommentParents } = await import('../../hooks/useCommentCache');
     const cache = getCommentParents(postId);
     return comments.map(c => ({
       ...c,
