@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
@@ -20,9 +20,11 @@ export interface CommentAuthor {
   avatar: string | null;
 }
 
+import type { Comment } from "../../types/post/post";
+
 interface CommentTreeProps {
   postId: string;
-  comments: import("../../types/post/post").Comment[];
+  comments: Comment[];
 }
 
 // Merge API comments with localStorage parent cache
@@ -31,7 +33,7 @@ async function mergeWithParentCache(postId: string, comments: Comment[]): Promis
   try {
     const { getCommentParents } = await import('../../hooks/useCommentCache');
     const cache = getCommentParents(postId);
-    return comments.map(c => ({
+    return comments.map((c: Comment) => ({
       ...c,
       parent: cache[c.id] !== undefined ? cache[c.id] : c.parent
     }));
@@ -294,9 +296,15 @@ function CommentItem({
 }
 
 export function CommentTree({ postId, comments }: CommentTreeProps) {
-  // Merge with localStorage cache to restore parent relationships
-  const commentsWithParent = mergeWithParentCache(postId, comments);
-  const commentTree = buildCommentTree(commentsWithParent);
+  const [processedComments, setProcessedComments] = useState<Comment[]>(comments);
+  
+  useEffect(() => {
+    mergeWithParentCache(postId, comments).then(result => {
+      setProcessedComments(result);
+    });
+  }, [postId, comments]);
+  
+  const commentTree = buildCommentTree(processedComments);
 
   if (commentTree.length === 0) return null;
 

@@ -40,6 +40,8 @@ interface CommentPostResponse {
       avatar: string | null;
     };
     created_at: string;
+    likes_count?: number;
+    replies_count?: number;
   };
   message: string;
 }
@@ -180,7 +182,7 @@ async function likePostApi(postId: string): Promise<LikePostResponse> {
 }
 
 // Saga workers
-function* loadFeedWorker(action: PayloadAction<{ page?: number; limit?: number; authorId?: string }>) {
+function* loadFeedWorker(action: PayloadAction<{ page?: number; limit?: number; authorId?: string }>): Generator<any, void, any> {
   try {
     const response: FeedListResponse = yield call(loadFeedApi, action.payload);
     
@@ -197,7 +199,7 @@ function* loadFeedWorker(action: PayloadAction<{ page?: number; limit?: number; 
   }
 }
 
-function* createPostWorker(action: PayloadAction<{ content: string; image?: string; files?: string[] }>) {
+function* createPostWorker(action: PayloadAction<{ content: string; image?: string; files?: string[] }>): Generator<any, void, any> {
   try {
     const response: CreatePostResponse = yield call(
       createPostApi, 
@@ -217,7 +219,7 @@ function* createPostWorker(action: PayloadAction<{ content: string; image?: stri
   }
 }
 
-function* likePostWorker(action: PayloadAction<{ postId: string }>) {
+function* likePostWorker(action: PayloadAction<{ postId: string }>): Generator<any, void, any> {
   try {
     const response: LikePostResponse = yield call(likePostApi, action.payload.postId);
     
@@ -305,12 +307,11 @@ async function uploadImageApi(file: File): Promise<UploadImageResponse> {
   return response.json();
 }
 
-function* uploadImageWorker(action: PayloadAction<{ file: File }>) {
+function* uploadImageWorker(action: PayloadAction<{ file: File }>): Generator<any, void, any> {
   try {
     const response: UploadImageResponse = yield call(uploadImageApi, action.payload.file);
     yield put(feedActions.uploadImageSucceeded({
       url: response.data.url,
-      filename: response.data.filename,
     }));
   } catch (error) {
     yield put(feedActions.uploadImageFailed({
@@ -319,7 +320,7 @@ function* uploadImageWorker(action: PayloadAction<{ file: File }>) {
   }
 }
 
-function* commentPostWorker(action: PayloadAction<{ postId: string; content: string; parentId?: string }>) {
+function* commentPostWorker(action: PayloadAction<{ postId: string; content: string; parentId?: string }>): Generator<any, void, any> {
   try {
     const response: CommentPostResponse = yield call(
       commentPostApi, 
@@ -328,17 +329,18 @@ function* commentPostWorker(action: PayloadAction<{ postId: string; content: str
       action.payload.parentId
     );
 
-    console.log("[Saga] Comment posted successfully:", response);
-
     // Only cache if parentId is real (not temp)
     if (action.payload.parentId && !action.payload.parentId.startsWith('temp-')) {
-      console.log('[Saga] Caching parent:', action.payload.postId, response.data.id, '->', action.payload.parentId);
       setCommentParent(action.payload.postId, response.data.id, action.payload.parentId);
     }
 
     yield put(feedActions.commentPostSucceeded({
       postId: action.payload.postId,
-      comment: response.data,
+      comment: {
+        ...response.data,
+        likes_count: response.data.likes_count ?? 0,
+        replies_count: response.data.replies_count ?? 0,
+      },
       tempId: action.payload.parentId?.startsWith('temp-') ? action.payload.parentId : undefined,
     }));
     
@@ -353,13 +355,10 @@ function* commentPostWorker(action: PayloadAction<{ postId: string; content: str
   }
 }
 
-function* loadPostDetailWorker(action: PayloadAction<{ postId: string }>) {
+function* loadPostDetailWorker(action: PayloadAction<{ postId: string }>): Generator<any, void, any> {
   try {
-    console.log('[FeedSaga] Loading comments for:', action.payload.postId);
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    // API get comments: /comments?post_id=xxx or query param
     const url = `${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://social-backend.bijancob.io.vn'}/comments?post_id=${action.payload.postId}&page=1&limit=50`;
-    console.log('[FeedSaga] Fetching from:', url);
     
     const response = yield call(fetch, url, {
       method: 'GET',
@@ -368,14 +367,11 @@ function* loadPostDetailWorker(action: PayloadAction<{ postId: string }>) {
       },
     });
     
-    console.log('[FeedSaga] Response status:', response.status);
-    
     if (!response.ok) {
       throw new Error(`Failed to load comments: ${response.status}`);
     }
     
     const data = yield call([response, 'json']);
-    console.log('[FeedSaga] Comments data:', data);
     
     // Handle various response formats:
     // 1. Array directly: [...]
@@ -394,14 +390,12 @@ function* loadPostDetailWorker(action: PayloadAction<{ postId: string }>) {
         comments = data.data.items;
       }
     }
-    console.log('[FeedSaga] Extracted comments:', comments);
     
     yield put(feedActions.loadPostDetailSucceeded({
       postId: action.payload.postId,
       comments: comments,
     }));
   } catch (error) {
-    console.error('[FeedSaga] Load comments failed:', error);
     yield put(feedActions.loadPostDetailFailed({
       postId: action.payload.postId,
       error: error instanceof Error ? error.message : 'Failed to load comments',
