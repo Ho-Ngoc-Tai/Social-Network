@@ -5,6 +5,18 @@ export interface User {
   avatar: string | null;
 }
 
+export interface Comment {
+  id: string;
+  content: string;
+  post_id?: string;
+  parent: string | null;
+  author: User;
+  created_at: string;
+  likes_count: number;
+  replies_count?: number;
+  is_liked?: boolean;
+}
+
 export interface Post {
   id: string;
   content: string;
@@ -15,4 +27,5 @@ export interface Post {
   comments_count: number;
   status: string;
   created_at: string;
+  comments?: Comment[];
 }

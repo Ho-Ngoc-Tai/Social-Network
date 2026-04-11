@@ -91,11 +91,11 @@ function* sendFriendRequestWorker(action: PayloadAction<{ userId: string }>) {
   try {
     yield call(sendFriendRequestApi, action.payload.userId);
     yield put(friendsActions.sendFriendRequestSucceeded());
-    // Reload pending requests after sending friend request
     yield put(friendsActions.loadPendingRequestsRequested());
-    // Reload friend status for the target user (if viewing their profile)
+    yield put(friendsActions.loadFriendsRequested());
     yield put(profileActions.reloadFriendStatusRequested({ userId: action.payload.userId }));
   } catch (error) {
+    console.error("[FriendsSaga] Send friend request failed:", error);
     yield put(friendsActions.sendFriendRequestFailed({
       error: error instanceof Error ? error.message : 'Failed to send friend request',
     }));
@@ -124,8 +124,11 @@ async function loadPendingRequestsApi(): Promise<LoadPendingRequestsResponse> {
 function* loadPendingRequestsWorker() {
   try {
     const response: LoadPendingRequestsResponse = yield call(loadPendingRequestsApi);
+    console.log("[FriendsSaga] Pending requests loaded:", response.data);
+    console.log("[FriendsSaga] First request sample:", response.data?.[0]);
     yield put(friendsActions.loadPendingRequestsSucceeded({ pendingRequests: response.data }));
   } catch (error) {
+    console.error("[FriendsSaga] Failed to load pending requests:", error);
     yield put(friendsActions.loadPendingRequestsFailed({
       error: error instanceof Error ? error.message : 'Failed to fetch pending requests',
     }));
@@ -157,9 +160,10 @@ function* acceptFriendRequestWorker(action: PayloadAction<{ userId: string }>) {
     // Use dedicated accept API endpoint
     yield call(acceptFriendRequestApi, action.payload.userId);
     yield put(friendsActions.acceptFriendRequestSucceeded());
-    // Reload both lists after accepting
+    // Reload both lists and profile friend status after accepting
     yield put(friendsActions.loadFriendsRequested());
     yield put(friendsActions.loadPendingRequestsRequested());
+    yield put(profileActions.reloadFriendStatusRequested({ userId: action.payload.userId }));
   } catch (error) {
     yield put(friendsActions.acceptFriendRequestFailed({
       error: error instanceof Error ? error.message : 'Failed to accept friend request',
@@ -171,9 +175,10 @@ function* unfriendWorker(action: PayloadAction<{ userId: string }>) {
   try {
     yield call(unfriendApi, action.payload.userId);
     yield put(friendsActions.unfriendSucceeded());
-    // Reload both lists after unfriend
+    // Reload both lists and profile friend status after unfriend
     yield put(friendsActions.loadFriendsRequested());
     yield put(friendsActions.loadPendingRequestsRequested());
+    yield put(profileActions.reloadFriendStatusRequested({ userId: action.payload.userId }));
   } catch (error) {
     yield put(friendsActions.unfriendFailed({
       error: error instanceof Error ? error.message : 'Failed to unfriend user',

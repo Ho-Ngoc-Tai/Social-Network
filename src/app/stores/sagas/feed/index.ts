@@ -2,6 +2,7 @@ import { put, takeLatest, call, select } from "redux-saga/effects";
 import { PayloadAction } from "@reduxjs/toolkit";
 import { feedActions } from "../../reducers/feed/feedSlice";
 import { NEXT_FEED_LIST_ENDPOINT, NEXT_FEED_CREATE_ENDPOINT, NEXT_POST_LIKE_ENDPOINT, NEXT_POST_COMMENT_ENDPOINT, NEXT_UPLOAD_IMAGE_ENDPOINT } from "../../../routes/next.api";
+import { setCommentParent } from "../../../hooks/useCommentCache";
 import { UploadImageResponse } from "../../../types/upload/upload";
 import { Post } from "../../../types/post/post";
 
@@ -242,17 +243,20 @@ function* likePostWorker(action: PayloadAction<{ postId: string }>) {
   }
 }
 
-async function commentPostApi(postId: string, content: string): Promise<CommentPostResponse> {
+async function commentPostApi(postId: string, content: string, parent?: string): Promise<CommentPostResponse> {
   const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
 
   try {
+    const body: { content: string; parent?: string } = { content };
+    if (parent) body.parent = parent;
+    
     const response = await fetch(NEXT_POST_COMMENT_ENDPOINT(postId), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         ...(token && { 'Authorization': `Bearer ${token}` }),
       },
-      body: JSON.stringify({ content }),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -315,19 +319,92 @@ function* uploadImageWorker(action: PayloadAction<{ file: File }>) {
   }
 }
 
-function* commentPostWorker(action: PayloadAction<{ postId: string; content: string }>) {
+function* commentPostWorker(action: PayloadAction<{ postId: string; content: string; parentId?: string }>) {
   try {
-    const response: CommentPostResponse = yield call(commentPostApi, action.payload.postId, action.payload.content);
+    const response: CommentPostResponse = yield call(
+      commentPostApi, 
+      action.payload.postId, 
+      action.payload.content,
+      action.payload.parentId
+    );
+
+    console.log("[Saga] Comment posted successfully:", response);
+
+    // Only cache if parentId is real (not temp)
+    if (action.payload.parentId && !action.payload.parentId.startsWith('temp-')) {
+      console.log('[Saga] Caching parent:', action.payload.postId, response.data.id, '->', action.payload.parentId);
+      setCommentParent(action.payload.postId, response.data.id, action.payload.parentId);
+    }
 
     yield put(feedActions.commentPostSucceeded({
       postId: action.payload.postId,
       comment: response.data,
+      tempId: action.payload.parentId?.startsWith('temp-') ? action.payload.parentId : undefined,
     }));
+    
+    // Reload post detail to get updated comments tree
+    yield put(feedActions.loadPostDetailRequested({ postId: action.payload.postId }));
 
   } catch (error) {
     yield put(feedActions.commentPostFailed({
       postId: action.payload.postId,
       error: error instanceof Error ? error.message : 'Failed to create comment',
+    }));
+  }
+}
+
+function* loadPostDetailWorker(action: PayloadAction<{ postId: string }>) {
+  try {
+    console.log('[FeedSaga] Loading comments for:', action.payload.postId);
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    // API get comments: /comments?post_id=xxx or query param
+    const url = `${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://social-backend.bijancob.io.vn'}/comments?post_id=${action.payload.postId}&page=1&limit=50`;
+    console.log('[FeedSaga] Fetching from:', url);
+    
+    const response = yield call(fetch, url, {
+      method: 'GET',
+      headers: {
+        ...(token && { 'Authorization': `Bearer ${token}` }),
+      },
+    });
+    
+    console.log('[FeedSaga] Response status:', response.status);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to load comments: ${response.status}`);
+    }
+    
+    const data = yield call([response, 'json']);
+    console.log('[FeedSaga] Comments data:', data);
+    
+    // Handle various response formats:
+    // 1. Array directly: [...]
+    // 2. { data: [...] }
+    // 3. { data: { comments: [...] } }
+    // 4. { data: { items: [...] } }  ← API trả về format này
+    let comments: any[] = [];
+    if (Array.isArray(data)) {
+      comments = data;
+    } else if (data.data) {
+      if (Array.isArray(data.data)) {
+        comments = data.data;
+      } else if (data.data.comments) {
+        comments = data.data.comments;
+      } else if (data.data.items) {
+        comments = data.data.items;
+      }
+    }
+    console.log('[FeedSaga] Extracted comments:', comments);
+    
+    yield put(feedActions.loadPostDetailSucceeded({
+      postId: action.payload.postId,
+      comments: comments,
+    }));
+  } catch (error) {
+    console.error('[FeedSaga] Load comments failed:', error);
+    yield put(feedActions.loadPostDetailFailed({
+      postId: action.payload.postId,
+      error: error instanceof Error ? error.message : 'Failed to load comments',
     }));
   }
 }
@@ -338,4 +415,5 @@ export function* feedSaga() {
   yield takeLatest(feedActions.likePostRequested.type, likePostWorker);
   yield takeLatest(feedActions.commentPostRequested.type, commentPostWorker);
   yield takeLatest(feedActions.uploadImageRequested.type, uploadImageWorker);
+  yield takeLatest(feedActions.loadPostDetailRequested.type, loadPostDetailWorker);
 }

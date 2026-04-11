@@ -79,6 +79,47 @@ const postComment = async (endpoint: string, content: string, token?: string) =>
   return await response.json();
 };
 
+// GET handler to fetch comments
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: postId } = await params;
+
+    const authHeader = req.headers.get('authorization');
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined;
+
+    const baseUrl = process.env.API_BASE_URL || 'https://social-backend.bijancob.io.vn';
+    const url = `${baseUrl}/posts/${postId}/comments`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        ...(token && { 'Authorization': `Bearer ${token}` }),
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return Response.json(
+        { error: 'Failed to fetch comments', details: errorText },
+        { status: response.status }
+      );
+    }
+
+    const data = await response.json();
+    return Response.json(data);
+
+  } catch (error) {
+    console.error('Get Comments Error:', error);
+    return Response.json(
+      { error: error instanceof Error ? error.message : 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

@@ -1,4 +1,4 @@
-import type { Post } from "../../../types/post/post";
+import type { Post, Comment } from "../../../types/post/post";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 export interface FeedState {
@@ -79,6 +79,15 @@ const feedSlice = createSlice({
       state.createLoading = false;
       state.createSuccess = false;
     },
+    deletePostSucceeded: (state, action: PayloadAction<{ postId: string }>) => {
+      state.items = state.items.filter(item => item.id !== action.payload.postId);
+    },
+    updatePostSucceeded: (state, action: PayloadAction<{ postId: string; content: string }>) => {
+      const post = state.items.find(p => p.id === action.payload.postId);
+      if (post) {
+        post.content = action.payload.content;
+      }
+    },
     resetCreateState: (state) => {
       state.createSuccess = false;
       state.createError = null;
@@ -99,14 +108,43 @@ const feedSlice = createSlice({
       state.likeLoading[action.payload.postId] = false;
       state.likeError = action.payload.error;
     },
-    commentPostRequested: (state, action: PayloadAction<{ postId: string; content: string }>) => {
+    commentPostRequested: (state, action: PayloadAction<{ postId: string; content: string; parentId?: string; tempId?: string }>) => {
       state.commentLoading[action.payload.postId] = true;
       state.commentError = null;
+      // Add optimistic comment with tempId if provided
+      if (action.payload.tempId) {
+        const post = state.items.find(p => p.id === action.payload.postId);
+        if (post) {
+          if (!post.comments) post.comments = [];
+          post.comments.unshift({
+            id: action.payload.tempId,
+            content: action.payload.content,
+            author: { id: 'current-user', full_name: 'You', username: 'you', avatar: null },
+            created_at: new Date().toISOString(),
+            likes_count: 0,
+            replies_count: 0,
+            parent: action.payload.parentId || null,
+          });
+        }
+      }
     },
-    commentPostSucceeded: (state, action: PayloadAction<{ postId: string; comment: { id: string; content: string; author: { id: string; full_name: string; avatar: string | null }; created_at: string } }>) => {
+    commentPostSucceeded: (state, action: PayloadAction<{ postId: string; comment: Comment; tempId?: string }>) => {
       const post = state.items.find(p => p.id === action.payload.postId);
       if (post) {
         post.comments_count += 1;
+        if (!post.comments) post.comments = [];
+        
+        // If tempId provided, replace temp comment with real one
+        if (action.payload.tempId) {
+          const tempIndex = post.comments.findIndex((c: Comment) => c.id === action.payload.tempId);
+          if (tempIndex >= 0) {
+            post.comments[tempIndex] = { ...action.payload.comment, parent: post.comments[tempIndex].parent };
+          } else {
+            post.comments.unshift(action.payload.comment);
+          }
+        } else {
+          post.comments.unshift(action.payload.comment);
+        }
       }
       state.commentLoading[action.payload.postId] = false;
     },
@@ -118,7 +156,7 @@ const feedSlice = createSlice({
       state.uploadImageLoading = true;
       state.uploadImageError = null;
     },
-    uploadImageSucceeded: (state, action: PayloadAction<{ url: string; filename: string }>) => {
+    uploadImageSucceeded: (state, action: PayloadAction<{ url: string }>) => {
       state.uploadedImageUrl = action.payload.url;
       state.uploadImageLoading = false;
       state.uploadImageError = null;
@@ -126,6 +164,33 @@ const feedSlice = createSlice({
     uploadImageFailed: (state, action: PayloadAction<{ error: string }>) => {
       state.uploadImageLoading = false;
       state.uploadImageError = action.payload.error;
+    },
+    loadPostDetailRequested: (state, _action: PayloadAction<{ postId: string }>) => {
+      state.commentLoading[_action.payload.postId] = true;
+    },
+    loadPostDetailSucceeded: (state, action: PayloadAction<{ postId: string; comments: Comment[] }>) => {
+      const post = state.items.find(p => p.id === action.payload.postId);
+      if (post) {
+        // Merge with localStorage cache for parent info
+        let mergedComments = action.payload.comments;
+        if (typeof window !== 'undefined') {
+          try {
+            const cache = JSON.parse(localStorage.getItem('comment_parents') || '{}');
+            const postCache = cache[action.payload.postId] || {};
+            mergedComments = action.payload.comments.map((c: Comment) => ({
+              ...c,
+              parent: postCache[c.id] !== undefined ? postCache[c.id] : c.parent
+            }));
+          } catch {
+            // ignore
+          }
+        }
+        post.comments = mergedComments;
+      }
+      state.commentLoading[action.payload.postId] = false;
+    },
+    loadPostDetailFailed: (state, action: PayloadAction<{ postId: string; error: string }>) => {
+      state.commentLoading[action.payload.postId] = false;
     },
   },
 });

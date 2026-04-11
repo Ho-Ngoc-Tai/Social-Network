@@ -71,8 +71,32 @@ export function FriendsView() {
   const blockedUsers = useAppSelector((s) => s.friends.blockedUsers);
   
   // Separate incoming (others sent to me) vs outgoing (I sent to others)
-  const incomingRequests = pendingRequests.filter(p => p.in_user?.id === currentUserId);
-  const outgoingRequests = pendingRequests.filter(p => p.out_user?.id === currentUserId);
+  // Backend returns: in_user = sender, out_user = receiver (opposite of naming)
+  // Safety: exclude requests where both users are the same (corrupted data)
+  const validRequests = pendingRequests.filter(p => 
+    p.in_user?.id !== p.out_user?.id && 
+    p.in_user?.id && 
+    p.out_user?.id
+  );
+  const incomingRequests = validRequests.filter(p => p.out_user?.id === currentUserId);
+  const outgoingRequests = validRequests.filter(p => p.in_user?.id === currentUserId);
+  
+  // Debug logging
+  useEffect(() => {
+    console.log("[FriendsView] currentUserId:", currentUserId);
+    console.log("[FriendsView] pendingRequests count:", pendingRequests.length);
+    pendingRequests.forEach((p, i) => {
+      console.log(`[FriendsView] Request ${i}:`, {
+        id: p.id,
+        in_user_id: p.in_user?.id,
+        in_user_name: p.in_user?.full_name,
+        out_user_id: p.out_user?.id,
+        out_user_name: p.out_user?.full_name,
+      });
+    });
+    console.log("[FriendsView] incomingRequests:", incomingRequests.length, incomingRequests);
+    console.log("[FriendsView] outgoingRequests:", outgoingRequests.length, outgoingRequests);
+  }, [pendingRequests, currentUserId, incomingRequests, outgoingRequests]);
   
   const users = useAppSelector((s) => s.friends.users);
   const isLoading = useAppSelector((s) => s.friends.isLoading);
@@ -86,6 +110,17 @@ export function FriendsView() {
     dispatch(friendsActions.loadFriendsRequested());
     dispatch(friendsActions.loadPendingRequestsRequested());
     dispatch(friendsActions.loadBlockedRequested());
+  }, [dispatch]);
+
+  // Reload when window gains focus (user returns to tab)
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log('[FriendsView] Window focused, reloading pending requests');
+      dispatch(friendsActions.loadPendingRequestsRequested());
+      dispatch(friendsActions.loadFriendsRequested());
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, [dispatch]);
 
   // Track previous isSendingRequest state for success detection
@@ -333,8 +368,8 @@ export function FriendsView() {
                       <CardContent sx={{ p: 2.5 }}>
                         <Box sx={{ display: "flex", alignItems: "center", gap: 2.5 }}>
                           <Avatar
-                            src={request.out_user?.avatar || undefined}
-                            alt={request.out_user?.full_name || undefined}
+                            src={request.in_user?.avatar || undefined}
+                            alt={request.in_user?.full_name || undefined}
                             sx={{ 
                               width: 56, 
                               height: 56,
@@ -344,7 +379,7 @@ export function FriendsView() {
                               fontWeight: 500
                             }}
                           >
-                            {request.out_user?.full_name?.charAt(0)?.toUpperCase() || "?"}
+                            {request.in_user?.full_name?.charAt(0)?.toUpperCase() || "?"}
                           </Avatar>
                           <Box sx={{ flex: 1 }}>
                             <Typography 
@@ -356,7 +391,7 @@ export function FriendsView() {
                                 mb: 0.3
                               }}
                             >
-                              {request.out_user?.full_name || "Unknown"}
+                              {request.in_user?.full_name || "Unknown"}
                             </Typography>
                             <Typography 
                               sx={{ 
@@ -364,7 +399,7 @@ export function FriendsView() {
                                 fontSize: "0.875rem"
                               }}
                             >
-                              @{request.out_user?.username || "unknown"}
+                              @{request.in_user?.username || "unknown"}
                             </Typography>
                             <Typography 
                               sx={{ 
@@ -390,7 +425,7 @@ export function FriendsView() {
                                 "&:hover": { bgcolor: "#003bb5" }
                               }}
                               onClick={() => {
-                                dispatch(friendsActions.acceptFriendRequestRequested({ userId: request.out_user?.id || '' }));
+                                dispatch(friendsActions.acceptFriendRequestRequested({ userId: request.in_user?.id || '' }));
                               }}
                             >
                               Confirm
@@ -408,7 +443,7 @@ export function FriendsView() {
                                 "&:hover": { bgcolor: "#f0f2f5", borderColor: "#d8dadf" }
                               }}
                               onClick={() => {
-                                dispatch(friendsActions.unfriendRequested({ userId: request.out_user?.id || '' }));
+                                dispatch(friendsActions.unfriendRequested({ userId: request.in_user?.id || '' }));
                               }}
                             >
                               Delete
@@ -450,8 +485,8 @@ export function FriendsView() {
                       <CardContent sx={{ p: 2.5 }}>
                         <Box sx={{ display: "flex", alignItems: "center", gap: 2.5 }}>
                           <Avatar
-                            src={request.in_user?.avatar || undefined}
-                            alt={request.in_user?.full_name || undefined}
+                            src={request.out_user?.avatar || undefined}
+                            alt={request.out_user?.full_name || undefined}
                             sx={{ 
                               width: 56, 
                               height: 56,
@@ -461,7 +496,7 @@ export function FriendsView() {
                               fontWeight: 500
                             }}
                           >
-                            {request.in_user?.full_name?.charAt(0)?.toUpperCase() || "?"}
+                            {request.out_user?.full_name?.charAt(0)?.toUpperCase() || "?"}
                           </Avatar>
                           <Box sx={{ flex: 1 }}>
                             <Typography 
@@ -473,7 +508,7 @@ export function FriendsView() {
                                 mb: 0.3
                               }}
                             >
-                              {request.in_user?.full_name || "Unknown"}
+                              {request.out_user?.full_name || "Unknown"}
                             </Typography>
                             <Typography 
                               sx={{ 
@@ -481,7 +516,7 @@ export function FriendsView() {
                                 fontSize: "0.875rem"
                               }}
                             >
-                              @{request.in_user?.username || "unknown"}
+                              @{request.out_user?.username || "unknown"}
                             </Typography>
                             <Typography 
                               sx={{ 
@@ -505,7 +540,7 @@ export function FriendsView() {
                               fontWeight: 500,
                               "&:hover": { bgcolor: "#f0f2f5", borderColor: "#d8dadf" }
                             }}
-                            onClick={() => handleCancelRequest(request.in_user?.id || '')}
+                            onClick={() => handleCancelRequest(request.out_user?.id || '')}
                           >
                             Cancel
                           </Button>

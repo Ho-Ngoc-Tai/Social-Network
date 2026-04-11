@@ -169,6 +169,50 @@ export async function PATCH(
   }
 }
 
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id: postId } = await params;
+    const body = await req.json();
+    
+    // Extract token from Authorization header
+    const authHeader = req.headers.get('authorization');
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined;
+    
+    console.log('Post Update API Debug:', {
+      postId,
+      body,
+      token: token ? 'present' : 'missing'
+    });
+    
+    const NEXT_POSTS_ENDPOINT = process.env.NEXT_PUBLIC_POSTS_ENDPOINT || 'https://social-backend.bijancob.io.vn/posts';
+    
+    const resp = await fetch(`${NEXT_POSTS_ENDPOINT}/${postId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : '',
+      },
+      body: JSON.stringify(body),
+    });
+    
+    if (!resp.ok) {
+      const errorText = await resp.text();
+      console.error('Post Update Backend Error:', resp.status, errorText);
+      return Response.json({ error: errorText, status: resp.status }, { status: resp.status });
+    }
+    
+    const data = await resp.json();
+    return Response.json(data);
+    
+  } catch (error) {
+    console.error('Post Update Error:', error);
+    return Response.json(
+      { error: error instanceof Error ? error.message : 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: postId } = await params;

@@ -2,21 +2,28 @@
 
 import Link from "next/link";
 import { useState, useCallback } from "react";
+import { CommentTree } from "./CommentTree";
 
 import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
 import IconButton from "@mui/material/IconButton";
-import Menu from "@mui/material/Menu";
-import MenuItem from "@mui/material/MenuItem";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import Image from "next/image";
 
+import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
 import FavoriteBorderRoundedIcon from "@mui/icons-material/FavoriteBorderRounded";
 import FavoriteRoundedIcon from "@mui/icons-material/FavoriteRounded";
 import ChatBubbleOutlineRoundedIcon from "@mui/icons-material/ChatBubbleOutlineRounded";
@@ -28,8 +35,9 @@ import { routes } from "../../constants/routes";
 import { Post } from "../../types/post/post";
 import { useAppDispatch, useAppSelector } from "../../hooks/storeHooks";
 import { feedActions } from "../../stores/reducers/feed/feedSlice";
+import { profileActions } from "../../stores/reducers/profile/profileSlice";
 import { useRouter } from "next/navigation";
-
+import { NEXT_FEED_UPDATE_ENDPOINT } from "../../routes/next.api";
 
 function formatTime(iso: string) {
   const d = new Date(iso);
@@ -40,17 +48,20 @@ function formatTime(iso: string) {
 export function PostCard({ post, variant = 'feed' }: { post: Post; variant?: 'feed' | 'profile' }) {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const likeLoading = useAppSelector((s) => s.feed.likeLoading[post.id] || false);
   const [isLiked, setIsLiked] = useState(false);
   const [localLikesCount, setLocalLikesCount] = useState(post.likes_count);
   const [showCommentInput, setShowCommentInput] = useState(false);
   const [commentContent, setCommentContent] = useState('');
-  const [comments, setComments] = useState<Array<{ id: string; content: string; author: { id: string; full_name: string; avatar: string | null }; created_at: string }>>([]);
+  const comments = post.comments || [];
   const commentLoading = useAppSelector((s) => s.feed.commentLoading[post.id] || false);
 
   // Menu state for post actions
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
-  const menuOpen = Boolean(menuAnchorEl);
+  
+  // Edit dialog state
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editContent, setEditContent] = useState(post.content);
+  const [editLoading, setEditLoading] = useState(false);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     event.stopPropagation();
@@ -61,11 +72,55 @@ export function PostCard({ post, variant = 'feed' }: { post: Post; variant?: 'fe
     setMenuAnchorEl(null);
   };
 
-  const handleEditPost = () => {
+  const handleEditClick = () => {
     handleMenuClose();
-    console.log("[PostCard] Edit post clicked:", post.id);
-    // TODO: Navigate to edit post or open edit dialog
-    // router.push(`/posts/${post.id}/edit`);
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdatePost = async () => {
+    setEditLoading(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      const url = NEXT_FEED_UPDATE_ENDPOINT(post.id);
+      
+      console.log('[PostCard] Update URL:', url);
+      console.log('[PostCard] Token:', token ? 'present' : 'missing');
+      
+      // Try using POST to Next.js API route which forwards to backend
+      const response = await fetch(`/api/posts/${post.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+        body: JSON.stringify({
+          content: editContent,
+          image: post.image || '',
+        }),
+      });
+      
+      if (response.ok) {
+        setEditDialogOpen(false);
+        // Update post in store
+        if (variant === 'profile') {
+          dispatch(profileActions.updateProfilePost({ 
+            postId: post.id, 
+            content: editContent 
+          }));
+        } else {
+          dispatch(feedActions.updatePostSucceeded({ 
+            postId: post.id, 
+            content: editContent 
+          }));
+        }
+      } else {
+        console.error('Failed to update post:', await response.text());
+      }
+    } catch (error) {
+      console.error('Error updating post:', error);
+    } finally {
+      setEditLoading(false);
+    }
   };
 
   const handleDeletePost = async () => {
@@ -79,23 +134,25 @@ export function PostCard({ post, variant = 'feed' }: { post: Post; variant?: 'fe
     }
     
     try {
-      const response = await fetch(`https://social-backend.bijancob.io.vn/posts/${post.id}`, {
+      const NEXT_POSTS_ENDPOINT = process.env.NEXT_PUBLIC_POSTS_ENDPOINT || 'https://social-backend.bijancob.io.vn/posts';
+      
+      const response = await fetch(`${NEXT_POSTS_ENDPOINT}/${post.id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': token ? `Bearer ${token}` : '',
         },
       });
       
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error("[PostCard] Delete failed:", errorData);
-        alert(errorData.message || `Failed to delete: ${response.status}`);
-        return;
+      if (response.ok) {
+        // Remove post from correct Redux store immediately
+        if (variant === 'profile') {
+          dispatch(profileActions.deleteProfilePost({ postId: post.id }));
+        } else {
+          dispatch(feedActions.deletePostSucceeded({ postId: post.id }));
+        }
+      } else {
+        console.error('Failed to delete post:', await response.text());
       }
-      
-      console.log("[PostCard] Post deleted successfully");
-      // Refresh the feed
-      dispatch(feedActions.loadFeedRequested({ page: 1, limit: 10 }));
     } catch (error) {
       console.error("[PostCard] Delete error:", error);
     }
@@ -132,15 +189,6 @@ export function PostCard({ post, variant = 'feed' }: { post: Post; variant?: 'fe
     e.stopPropagation();
     if (!commentContent.trim()) return;
     
-    // Optimistic: add comment immediately to local state
-    const newComment = {
-      id: `temp-${Date.now()}`,
-      content: commentContent.trim(),
-      author: { id: 'current-user', full_name: 'You', avatar: null },
-      created_at: new Date().toISOString(),
-    };
-    setComments(prev => [newComment, ...prev]);
-    
     dispatch(feedActions.commentPostRequested({ postId: post.id, content: commentContent.trim() }));
     setCommentContent('');
     setShowCommentInput(false);
@@ -149,6 +197,7 @@ export function PostCard({ post, variant = 'feed' }: { post: Post; variant?: 'fe
   const isProfile = variant === 'profile';
 
   return (
+    <>
     <Card
       onClick={handleCardClick}
       sx={{
@@ -241,6 +290,31 @@ export function PostCard({ post, variant = 'feed' }: { post: Post; variant?: 'fe
               <IconButton onClick={handleMenuOpen}>
                 <MoreHorizOutlinedIcon fontSize="small" />
               </IconButton>
+              <Menu
+                anchorEl={menuAnchorEl}
+                open={Boolean(menuAnchorEl)}
+                onClose={handleMenuClose}
+                onClick={(e) => e.stopPropagation()}
+                PaperProps={{
+                  sx: {
+                    minWidth: 120,
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+                  }
+                }}
+              >
+                <MenuItem onClick={handleEditClick}>
+                  <ListItemIcon>
+                    <EditIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText>Edit</ListItemText>
+                </MenuItem>
+                <MenuItem onClick={handleDeletePost} sx={{ color: "#d32f2f" }}>
+                  <ListItemIcon>
+                    <DeleteIcon fontSize="small" sx={{ color: "#d32f2f" }} />
+                  </ListItemIcon>
+                  <ListItemText>Delete</ListItemText>
+                </MenuItem>
+              </Menu>
             </Box>
           </Box>
 
@@ -447,29 +521,10 @@ export function PostCard({ post, variant = 'feed' }: { post: Post; variant?: 'fe
             </IconButton>
           </Box>
 
-          {/* Comments List */}
+          {/* Comments Tree */}
           {comments.length > 0 && (
-            <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-              {comments.map((comment) => (
-                <Box key={comment.id} sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
-                  <Avatar 
-                    src={comment.author.avatar || undefined} 
-                    alt={comment.author.full_name} 
-                    sx={{ width: 32, height: 32 }} 
-                  />
-                  <Box sx={{ flex: 1, backgroundColor: 'rgba(240,242,245,1)', borderRadius: 2, p: 1.5 }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: '0.85rem' }}>
-                      {comment.author.full_name}
-                    </Typography>
-                    <Typography variant="body2" sx={{ mt: 0.5 }}>
-                      {comment.content}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                      {formatTime(comment.created_at)}
-                    </Typography>
-                  </Box>
-                </Box>
-              ))}
+            <Box onClick={(e) => e.stopPropagation()}>
+              <CommentTree postId={post.id} comments={comments} />
             </Box>
           )}
 
@@ -510,5 +565,37 @@ export function PostCard({ post, variant = 'feed' }: { post: Post; variant?: 'fe
         </Box>
       </CardContent>
     </Card>
+    
+    {/* Edit Post Dialog */}
+    <Dialog 
+      open={editDialogOpen} 
+      onClose={() => setEditDialogOpen(false)}
+      maxWidth="sm"
+      fullWidth
+    >
+      <DialogTitle>Edit Post</DialogTitle>
+      <DialogContent>
+        <TextField
+          fullWidth
+          multiline
+          rows={4}
+          value={editContent}
+          onChange={(e) => setEditContent(e.target.value)}
+          placeholder="What's on your mind?"
+          sx={{ mt: 1 }}
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+        <Button 
+          onClick={handleUpdatePost} 
+          variant="contained" 
+          disabled={!editContent.trim() || editLoading}
+        >
+          {editLoading ? 'Updating...' : 'Update'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+    </>
   );
 }

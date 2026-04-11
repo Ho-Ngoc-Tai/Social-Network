@@ -109,18 +109,13 @@ function* updateProfileWorker(action: PayloadAction<{ userId: string; data: Part
 // Reload only friend status
 function* reloadFriendStatusWorker(action: PayloadAction<{ userId: string }>) {
   try {
-    const response: UserProfileResponse = yield call(
-      loadUserProfileApi,
-      action.payload.userId,
-      0, // page 0 to get minimal data
-      0, // limit 0 to skip posts
-    );
-
+    console.log('[ProfileSaga] Reloading friend status for:', action.payload.userId);
+    const response: UserProfileResponse = yield call(loadUserProfileApi, action.payload.userId, 0, 0);
+    console.log('[ProfileSaga] Friend status response:', response.data.friend);
     yield put(profileActions.reloadFriendStatusSucceeded({ friend: response.data.friend }));
   } catch (error) {
-    yield put(profileActions.reloadFriendStatusFailed({
-      error: error instanceof Error ? error.message : 'Failed to reload friend status',
-    }));
+    console.error('[ProfileSaga] Reload friend status failed:', error);
+    yield put(profileActions.reloadFriendStatusFailed({ error: error instanceof Error ? error.message : 'Failed to reload friend status' }));
   }
 }
 

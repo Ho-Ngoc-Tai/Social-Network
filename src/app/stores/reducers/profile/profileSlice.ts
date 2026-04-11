@@ -70,6 +70,15 @@ const profileSlice = createSlice({
       state.isLoading = false;
       state.error = action.payload.error;
     },
+    deleteProfilePost: (state, action: PayloadAction<{ postId: string }>) => {
+      state.posts = state.posts.filter(post => post.id !== action.payload.postId);
+    },
+    updateProfilePost: (state, action: PayloadAction<{ postId: string; content: string }>) => {
+      const post = state.posts.find(p => p.id === action.payload.postId);
+      if (post) {
+        post.content = action.payload.content;
+      }
+    },
   },
 });
 
